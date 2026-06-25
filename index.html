@@ -7,6 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Family Hub">
+<link rel="manifest" href="/manifest.json">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Family Hub</title>
 <style>
@@ -292,7 +293,7 @@ function today(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()
 function fmtDate(d){if(!d)return"";var p=d.split("-");return MONTHS[+p[1]-1]+" "+(+p[2])+", "+p[0];}
 function fmtTime(h,m,ap){return String(+h||0).padStart(2,"0")+":"+String(+m||0).padStart(2,"0")+" "+ap;}
 function getHolidays(d){return ALL_HOLIDAYS.filter(function(h){return h.date===d;});}
-function getMC(ev){if(!ev)return"#888";if(ev.type==="birthday")return"#ec4899";if(ev.type==="vacation")return"#3b82f6";var m=ev.members||[];if(!m.length)return"#888";if(m.length>1)return"#1a1a1a";return(MEMBERS[m[0]]&&MEMBERS[m[0]].color)||"#888";}
+function getMC(ev){if(!ev)return"#888";if(ev.jobColor)return ev.jobColor;if(ev.type==="birthday")return"#ec4899";if(ev.type==="vacation")return"#3b82f6";var m=ev.members||[];if(!m.length)return"#888";if(m.length>1)return"#1a1a1a";return(MEMBERS[m[0]]&&MEMBERS[m[0]].color)||"#888";}
 function getML(ev){if(!ev)return"#e5e7eb";if(ev.type==="birthday")return"#fce7f3";if(ev.type==="vacation")return"#dbeafe";var m=ev.members||[];if(!m.length)return"#e5e7eb";if(m.length>1)return"#f3f4f6";return(MEMBERS[m[0]]&&MEMBERS[m[0]].light)||"#e5e7eb";}
 function isVacDay(d){return STATE.events.some(function(e){return e.type==="vacation"&&e.date&&e.endDate&&d>=e.date&&d<=e.endDate;});}
 function mapsLinks(loc){if(!loc)return"";var enc=encodeURIComponent(loc);return " <a href=\"https://maps.apple.com/?q="+enc+"\" class=\"map-link\" target=\"_blank\">Apple Maps</a> <a href=\"https://www.google.com/maps/search/"+enc+"\" class=\"map-link\" target=\"_blank\">Google Maps</a>";}
@@ -312,15 +313,16 @@ var STATE={
   groceries:[],mealShopping:[],
   stores:STORES_DEFAULT.reduce(function(a,s){a[s]=[];return a;},{}),storeList:STORES_DEFAULT.slice(),
   events_work:[],reminders_work:[],completedReminders_work:[],
-  notifEnabled:false,mikeShareReminders:false,courtneyShareReminders:false
+  notifEnabled:false,mikeShareReminders:false,courtneyShareReminders:false,
+  jobs:[]
 };
 var FB_URL="";
 function fbConfigured(){return FB_URL!=="";}
 function setSyncStatus(msg,color){var el=document.getElementById("sync-status-txt");if(el){el.textContent=msg;el.style.color=color||"#9ca3af";}}
 function fbPush(){if(!fbConfigured())return;setSyncStatus("Saving...","#6366f1");var xhr=new XMLHttpRequest();xhr.open("PUT",FB_URL+"/familyhub.json",true);xhr.setRequestHeader("Content-Type","application/json");xhr.onload=function(){if(xhr.status>=200&&xhr.status<300)setSyncStatus("Synced","#22c55e");else setSyncStatus("Save error "+xhr.status,"#ef4444");};xhr.onerror=function(){setSyncStatus("Network error","#ef4444");};xhr.send(JSON.stringify(STATE));}
-function fbPull(onDone){if(!fbConfigured()){if(onDone)onDone();return;}setSyncStatus("Syncing...","#6366f1");var xhr=new XMLHttpRequest();xhr.open("GET",FB_URL+"/familyhub.json",true);xhr.onload=function(){if(xhr.status>=200&&xhr.status<300){try{var remote=JSON.parse(xhr.responseText);if(remote&&typeof remote==="object"&&remote.events!==undefined){if(remote.appVersion&&remote.appVersion!==APP_VERSION){window.location.reload(true);return;}if(JSON.stringify(remote)!==JSON.stringify(STATE)){for(var k in remote)STATE[k]=remote[k];try{localStorage.setItem("fhub8",JSON.stringify(STATE));}catch(e){}if(currentUser)renderCurrentTab();}}setSyncStatus("Synced","#22c55e");}catch(e){setSyncStatus("Parse error","#ef4444");}}else{setSyncStatus("Error "+xhr.status,"#ef4444");}if(onDone)onDone();};xhr.onerror=function(){setSyncStatus("Network error","#ef4444");if(onDone)onDone();};xhr.send();}
+function fbPull(onDone){if(!fbConfigured()){if(onDone)onDone();return;}setSyncStatus("Syncing...","#6366f1");var xhr=new XMLHttpRequest();xhr.open("GET",FB_URL+"/familyhub.json",true);xhr.onload=function(){if(xhr.status>=200&&xhr.status<300){try{var remote=JSON.parse(xhr.responseText);if(remote&&typeof remote==="object"&&remote.events!==undefined){if(remote.appVersion&&remote.appVersion!==APP_VERSION){window.location.reload(true);return;}for(var k in remote)STATE[k]=remote[k];try{localStorage.setItem("fhub8",JSON.stringify(STATE));}catch(e){}if(currentUser)renderCurrentTab();}setSyncStatus("Synced","#22c55e");}catch(e){setSyncStatus("Parse error","#ef4444");}}else{setSyncStatus("Error "+xhr.status,"#ef4444");}if(onDone)onDone();};xhr.onerror=function(){setSyncStatus("Network error","#ef4444");if(onDone)onDone();};xhr.send();}
 var syncInterval=null;
-function startSync(){fbPull();if(syncInterval)clearInterval(syncInterval);syncInterval=setInterval(fbPull,15000);}
+function startSync(){fbPull();if(syncInterval)clearInterval(syncInterval);syncInterval=setInterval(fbPull,5000);}
 function showSyncSetup(){var el=document.getElementById("generic-modal-content");el.innerHTML="";var t=document.createElement("div");t.style.cssText="font-weight:700;font-size:17px;margin-bottom:8px";t.textContent="Connect Family Sync";var sub=document.createElement("div");sub.style.cssText="font-size:13px;color:#6b7280;margin-bottom:14px;line-height:1.5";sub.textContent="One-time setup. Everyone enters the same URL. No tokens or passwords.";var steps=document.createElement("div");steps.style.cssText="background:#f9fafb;border-radius:10px;padding:12px;margin-bottom:12px";["Go to console.firebase.google.com","Create a project (e.g. myles-family)","Click Realtime Database in left menu","Click Create Database, any region","On rules page choose Start in test mode","Copy the database URL (https://...firebaseio.com)","Paste it below and tap Connect"].forEach(function(s,i){var row=document.createElement("div");row.style.cssText="display:flex;gap:8px;align-items:flex-start;padding:3px 0";var num=document.createElement("div");num.style.cssText="width:20px;height:20px;border-radius:50%;background:#6366f1;color:white;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0";num.textContent=i+1;var txt=document.createElement("div");txt.style.cssText="font-size:12px;color:#374151;line-height:1.4;padding-top:2px";txt.textContent=s;row.appendChild(num);row.appendChild(txt);steps.appendChild(row);});var note=document.createElement("div");note.style.cssText="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:8px 10px;font-size:12px;color:#166534;margin-bottom:12px";note.textContent="Safe to share with family. No passwords needed.";var lbl=document.createElement("div");lbl.style.cssText="font-size:11px;font-weight:600;color:#6b7280;margin-bottom:4px";lbl.textContent="Database URL";var inp=document.createElement("input");inp.id="fb-url-inp";inp.placeholder="https://your-project-default-rtdb.firebaseio.com";inp.style.marginBottom="12px";if(FB_URL)inp.value=FB_URL;var btnRow=document.createElement("div");btnRow.style.cssText="display:flex;gap:8px";var cb=document.createElement("button");cb.className="btn btn-primary";cb.style.flex="1";cb.textContent="Connect";cb.onclick=function(){var url=document.getElementById("fb-url-inp").value.trim().replace(/\/+$/,"");if(!url||!url.startsWith("https://")){showInfoModal("Invalid URL","Enter the full URL starting with https://");return;}FB_URL=url;localStorage.setItem("fhub_fburl",url);cb.textContent="Connecting...";cb.disabled=true;
     // Pull first - only push if Firebase has no data yet
     var checkXhr=new XMLHttpRequest();
@@ -339,7 +341,7 @@ function showSyncSetup(){var el=document.getElementById("generic-modal-content")
       fbPull(function(){startSync();closeModal("generic-modal");showInfoModal("Connected!","Family Hub is now syncing across all devices.");});
     };
     checkXhr.send();};var sb=document.createElement("button");sb.className="btn btn-secondary";sb.textContent="Skip";sb.onclick=function(){closeModal("generic-modal");};btnRow.appendChild(cb);btnRow.appendChild(sb);el.appendChild(t);el.appendChild(sub);el.appendChild(steps);el.appendChild(note);el.appendChild(lbl);el.appendChild(inp);el.appendChild(btnRow);document.getElementById("generic-modal").classList.add("open");}
-function save(){try{localStorage.setItem("fhub8",JSON.stringify(STATE));}catch(e){}fbPush();}
+function save(){STATE.lastModified=new Date().getTime();try{localStorage.setItem("fhub8",JSON.stringify(STATE));}catch(e){}fbPush();}
 function load(){try{var s=localStorage.getItem("fhub8");if(s){var d=JSON.parse(s);for(var k in d)STATE[k]=d[k];}}catch(e){}}
 load();
 
@@ -604,7 +606,9 @@ function renderHome(){
   document.getElementById("home-greeting").textContent=(hr<12?"Good morning":hr<17?"Good afternoon":"Good evening")+", "+MEMBERS[currentUser].name+"!";
   var hols=getHolidays(t),hh="";hols.forEach(function(h){hh+="<div style='background:#fef9c3;border:1.5px solid #ca8a04;border-radius:12px;padding:10px 14px;margin-bottom:8px;display:flex;gap:8px;align-items:center'><span>&#127881;</span><span style='font-size:13px;font-weight:500;color:#92400e'>"+h.name+"</span></div>";});
   document.getElementById("home-holiday").innerHTML=hh;
-  document.getElementById("home-notif-banner").innerHTML=!STATE.notifEnabled?"<div class='notif-banner'><div class='row-between'><div><div style='font-size:13px;font-weight:600;color:#1d4ed8'>Enable notifications</div><div style='font-size:11px;color:#3b82f6;margin-top:1px'>Pop-up alerts on your device</div></div><button class='btn btn-primary btn-sm' onclick='enableNotif()'>Enable</button></div></div>":"";
+  var notifGranted=typeof Notification!=="undefined"&&Notification.permission==="granted";
+  if(notifGranted&&!STATE.notifEnabled){STATE.notifEnabled=true;}
+  document.getElementById("home-notif-banner").innerHTML=notifGranted?"":"<div class='notif-banner'><div class='row-between'><div><div style='font-size:13px;font-weight:600;color:#1d4ed8'>Enable notifications</div></div><button class='btn btn-primary btn-sm' onclick='enableNotif()'>Enable</button></div></div>";
   var evs=(workMode?STATE.events_work:STATE.events).filter(function(e){return true;}).filter(function(e){return eventOccursOn(e,t);});
   document.getElementById("home-events").innerHTML=evs.length?evs.map(eventCardHTML).join(""):"<div class='card' style='text-align:center;color:#9ca3af;font-size:13px;padding:16px'>No events today</div>";
   var t2=today();var rems=getVisibleReminders().filter(function(r){return !r.completed&&r.date<=t2;}),rh="";
@@ -799,6 +803,7 @@ function openEventModal(id){
   html+="<div><div style='font-size:12px;font-weight:500;color:#6b7280;margin-bottom:6px'>Notifications</div><div id='ev-notif-rows'></div></div>";
   html+="<div><div style='font-size:12px;font-weight:500;color:#6b7280;margin-bottom:4px'>Parent attending</div><select id='ev-parent' style='width:100%'>"+pOpts+"</select></div>";
   if(MEMBERS[currentUser]&&MEMBERS[currentUser].admin){html+="<div style='display:flex;align-items:center;gap:10px'><label class='toggle-wrap'><input type='checkbox' id='ev-show-work' "+(ev&&ev.showInWork?'checked':'')+"><span class='toggle-slider'></span></label><span style='font-size:13px'>Show in Mike's work calendar</span></div>";}
+  if(workMode&&(STATE.jobs||[]).length){var jobOpts="<option value=''>No job assigned</option>";(STATE.jobs||[]).forEach(function(j){jobOpts+="<option value='"+j.id+"'"+(ev&&ev.jobId===j.id?" selected":"")+" style='color:"+j.color+"'>"+j.name+"</option>";});html+="<div><div style='font-size:12px;font-weight:500;color:#6b7280;margin-bottom:4px'>Job</div><select id='ev-job' style='width:100%'>"+jobOpts+"</select></div>";}
   html+="<div style='display:flex;gap:8px;margin-top:4px'><button class='btn btn-primary' style='flex:1' onclick='saveEvent()'>Save</button>"+(ev?"<button class='btn btn-danger' onclick=\"deleteEvent('"+ev.id+"')\">Delete</button>":"")+"<button class='btn btn-secondary' onclick=\"closeModal('event-modal')\">Cancel</button></div>";
   document.getElementById("event-form").innerHTML=html;
   if(ev&&ev.location)renderLocPreview();renderTypeHint();
@@ -816,12 +821,12 @@ function saveEvent(){
   var typeEl=document.getElementById("ev-type"),type=typeEl?typeEl.value:"event";
   var ct=document.querySelector("input[name='ctype']:checked");
   var s=getTimeField("evs"),e2=getTimeField("eve");
-  var ev={id:editingEventId||uid(),title:title,type:type,members:evMemSel.length?evMemSel:[currentUser],date:document.getElementById("ev-date").value,endDate:(document.getElementById("ev-enddate")||{}).value||"",startH:s.h,startM:s.m,startAP:s.ap,endH:e2.h,endM:e2.m,endAP:e2.ap,location:document.getElementById("ev-loc").value,notes:document.getElementById("ev-notes").value,repeat:type==="birthday"?"yearly":document.getElementById("ev-repeat").value,customType:ct?ct.value:"days",repeatDays:evRepeatDays.slice(),repeatEvery:parseInt((document.getElementById("ev-every")||{}).value)||2,repeatNth:(document.getElementById("ev-nth")||{}).value||"1st",repeatNthDay:parseInt((document.getElementById("ev-nthday")||{}).value)||1,notifications:eventNotifList.slice(),parent:(document.getElementById("ev-parent")||{}).value||"",showInWork:!!(document.getElementById("ev-show-work")&&document.getElementById("ev-show-work").checked)};
+  var jobSel=document.getElementById("ev-job");var jobId=jobSel?jobSel.value:"";var jobObj=(STATE.jobs||[]).filter(function(j){return j.id===jobId;})[0];var ev={id:editingEventId||uid(),title:title,type:type,members:evMemSel.length?evMemSel:[currentUser],jobId:jobId,jobColor:jobObj?jobObj.color:"",date:document.getElementById("ev-date").value,endDate:(document.getElementById("ev-enddate")||{}).value||"",startH:s.h,startM:s.m,startAP:s.ap,endH:e2.h,endM:e2.m,endAP:e2.ap,location:document.getElementById("ev-loc").value,notes:document.getElementById("ev-notes").value,repeat:type==="birthday"?"yearly":document.getElementById("ev-repeat").value,customType:ct?ct.value:"days",repeatDays:evRepeatDays.slice(),repeatEvery:parseInt((document.getElementById("ev-every")||{}).value)||2,repeatNth:(document.getElementById("ev-nth")||{}).value||"1st",repeatNthDay:parseInt((document.getElementById("ev-nthday")||{}).value)||1,notifications:eventNotifList.slice(),parent:(document.getElementById("ev-parent")||{}).value||"",showInWork:!!(document.getElementById("ev-show-work")&&document.getElementById("ev-show-work").checked)};
   if(workMode){var wl=STATE.events_work||[];var wi=wl.map(function(x){return x.id;}).indexOf(ev.id);if(wi>=0)wl[wi]=ev;else wl.push(ev);STATE.events_work=wl;}
   else{var idx=STATE.events.map(function(x){return x.id;}).indexOf(ev.id);if(idx>=0)STATE.events[idx]=ev;else STATE.events.push(ev);}
   save();closeModal("event-modal");renderCalendar();
 }
-function deleteEvent(id){confirmAction("Delete this event?",function(){STATE.events=STATE.events.filter(function(e){return e.id!==id;});STATE.events_work=(STATE.events_work||[]).filter(function(e){return e.id!==id;});save();closeModal("event-modal");renderCalendar();});}
+function deleteEvent(id){confirmAction("Delete this event?",function(){STATE.events=STATE.events.filter(function(e){return e.id!==id;});STATE.events_work=(STATE.events_work||[]).filter(function(e){return e.id!==id;});STATE.lastModified=new Date().getTime();save();fbPush();closeModal("event-modal");renderCalendar();});}
 
 // ── TASKS ────────────────────────────────────────────────────────────────
 function openGiveReward(kid){
@@ -841,10 +846,10 @@ function openGiveReward(kid){
 function renderTasks(){
   var isAdmin=MEMBERS[currentUser]&&MEMBERS[currentUser].admin,isChild=MEMBERS[currentUser]&&MEMBERS[currentUser].child;
   document.getElementById("tasks-title").textContent=workMode?"Work Tasks":"Tasks & Chores";
-  var tabs=workMode?["todos"]:["chores","completed-chores","todos","rewards"];
+  var tabs=workMode?["todos","jobs"]:["chores","completed-chores","todos","rewards"];
   if(tabs.indexOf(currentTaskSub)<0)currentTaskSub=tabs[0];
   var th=document.getElementById("tasks-tabs");th.innerHTML="";
-  var labels={"chores":"Chores","completed-chores":"Done","todos":"To-Do","rewards":"Rewards"};
+  var labels={"chores":"Chores","completed-chores":"Done","todos":"To-Do","rewards":"Rewards","jobs":"Jobs"};
   tabs.forEach(function(t){var d=document.createElement("div");d.className="sub-tab"+(currentTaskSub===t?" active":"");d.textContent=labels[t]||t;d.onclick=(function(tt,dd){return function(){switchTaskTab(tt,dd);};})(t,d);th.appendChild(d);});
   renderTaskContent();
 }
@@ -961,6 +966,61 @@ function renderTaskContent(){
       });
       c3.appendChild(card);
     });
+    return;
+  }
+  if(currentTaskSub==="jobs"){
+    var JOB_COLORS=["#ef4444","#f97316","#eab308","#22c55e","#14b8a6","#3b82f6","#6366f1","#a855f7","#ec4899","#f43f5e","#84cc16","#06b6d4","#8b5cf6","#f59e0b","#10b981"];
+    var c4=document.getElementById("tasks-content");c4.innerHTML="";
+    var jobs=STATE.jobs||[];
+    // Job list
+    if(!jobs.length){var none=document.createElement("div");none.style.cssText="text-align:center;color:#9ca3af;font-size:13px;padding:20px 0";none.textContent="No jobs yet - tap Add Job below";c4.appendChild(none);}
+    jobs.forEach(function(job){
+      var card=document.createElement("div");card.className="card";card.style.cssText="display:flex;align-items:center;gap:12px;padding:12px 14px;margin-bottom:8px";
+      var dot=document.createElement("div");dot.style.cssText="width:28px;height:28px;border-radius:50%;background:"+job.color+";flex-shrink:0";
+      var name=document.createElement("div");name.style.cssText="flex:1;font-size:15px;font-weight:500";name.textContent=job.name;
+      var del=document.createElement("button");del.style.cssText="background:none;border:none;color:#ef4444;cursor:pointer;font-size:18px;padding:0 2px";del.innerHTML="&#215;";
+      (function(jid){del.onclick=function(){confirmAction("Delete this job?",function(){STATE.jobs=(STATE.jobs||[]).filter(function(j){return j.id!==jid;});save();renderTaskContent();});};})(job.id);
+      card.appendChild(dot);card.appendChild(name);card.appendChild(del);c4.appendChild(card);
+    });
+    // Add job button
+    var addBtn=document.createElement("button");addBtn.className="btn btn-primary";addBtn.style.cssText="width:100%;margin-top:10px";addBtn.textContent="+ Add Job";
+    addBtn.onclick=function(){
+      var el=document.getElementById("generic-modal-content");el.innerHTML="";
+      var title=document.createElement("div");title.style.cssText="font-weight:700;font-size:17px;margin-bottom:14px";title.textContent="Add Job";
+      var form=document.createElement("div");form.style.cssText="display:flex;flex-direction:column;gap:14px";
+      // Name field
+      var nl=document.createElement("div");nl.innerHTML="<div style='font-size:12px;font-weight:500;color:#6b7280;margin-bottom:4px'>Job name</div><input id='job-name' placeholder='e.g. Smith Renovation'>";form.appendChild(nl);
+      // Colour picker
+      var cl=document.createElement("div");
+      var clL=document.createElement("div");clL.style.cssText="font-size:12px;font-weight:500;color:#6b7280;margin-bottom:8px";clL.textContent="Colour";
+      var clGrid=document.createElement("div");clGrid.style.cssText="display:grid;grid-template-columns:repeat(5,1fr);gap:8px";
+      var selectedColor=JOB_COLORS[0];
+      JOB_COLORS.forEach(function(col,i){
+        var swatch=document.createElement("div");swatch.style.cssText="width:100%;aspect-ratio:1;border-radius:50%;background:"+col+";cursor:pointer;border:3px solid "+(i===0?"#1a1a1a":"transparent");
+        swatch.id="swatch-"+i;
+        (function(c,ii){swatch.onclick=function(){
+          selectedColor=c;
+          JOB_COLORS.forEach(function(_,jj){var s=document.getElementById("swatch-"+jj);if(s)s.style.borderColor=jj===ii?"#1a1a1a":"transparent";});
+        };})(col,i);
+        clGrid.appendChild(swatch);
+      });
+      cl.appendChild(clL);cl.appendChild(clGrid);form.appendChild(cl);
+      // Buttons
+      var btnRow=document.createElement("div");btnRow.style.cssText="display:flex;gap:8px;margin-top:4px";
+      var saveBtn=document.createElement("button");saveBtn.className="btn btn-primary";saveBtn.style.flex="1";saveBtn.textContent="Add Job";
+      saveBtn.onclick=function(){
+        var name2=document.getElementById("job-name").value.trim();
+        if(!name2)return alert("Enter a job name");
+        if(!STATE.jobs)STATE.jobs=[];
+        STATE.jobs.push({id:uid(),name:name2,color:selectedColor});
+        save();closeModal("generic-modal");renderTaskContent();
+      };
+      var cn=document.createElement("button");cn.className="btn btn-secondary";cn.textContent="Cancel";cn.onclick=function(){closeModal("generic-modal");};
+      btnRow.appendChild(saveBtn);btnRow.appendChild(cn);form.appendChild(btnRow);
+      el.appendChild(title);el.appendChild(form);
+      document.getElementById("generic-modal").classList.add("open");
+    };
+    c4.appendChild(addBtn);
     return;
   }
 }
@@ -1306,7 +1366,21 @@ function checkNotifications(){
       var key="n_"+item.id+"_"+mb+"_"+item.date;
       if(nowMs>=notifMs&&nowMs<notifMs+120000&&!sessionStorage.getItem(key)){
         var body=mb===0?"Now: "+item.title:mb<60?mb+" min: "+item.title:mb===60?"1 hour: "+item.title:"Tomorrow: "+item.title;
-        try{var n=new Notification("Family Hub",{body:body,requireInteraction:true,tag:key});n.onclick=function(){window.focus();this.close();};}catch(e){}
+        // Send via ntfy for locked screen notifications
+        try{
+          var nx=new XMLHttpRequest();
+          nx.open("POST","https://ntfy.sh/ZarzFamilyZone",true);
+          nx.setRequestHeader("Title","Family Hub");
+          nx.setRequestHeader("Priority","high");
+          nx.setRequestHeader("Tags","bell");
+          nx.send(body);
+        }catch(e){}
+        // Also try direct notification as fallback
+        try{
+          if(typeof Notification!=="undefined"&&Notification.permission==="granted"){
+            var n=new Notification("Family Hub",{body:body,tag:key});
+          }
+        }catch(e){}
         sessionStorage.setItem(key,"1");
       }
     });
@@ -1335,6 +1409,8 @@ function openGeneric(html){document.getElementById("generic-modal-content").inne
 function closeModal(id){document.getElementById(id).classList.remove("open");}
 
 try{var fu=localStorage.getItem("fhub_fburl");if(fu)FB_URL=fu;}catch(e){}
+
+
 if(fbConfigured()){fbPull(function(){startSync();});}
 initLogin();
 </script>

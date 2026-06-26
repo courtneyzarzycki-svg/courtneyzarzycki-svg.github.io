@@ -1419,17 +1419,24 @@ initLogin();
 
 async function getFCMToken() {
   try {
+
+    const permission = await Notification.requestPermission();
+    if (permission !== "granted") {
+      throw new Error("Notification permission not granted");
+    }
+
     const token = await getToken(messaging, {
       vapidKey: "BLuv5J3H0LpdaJ8VYgCVPCRqtsNK2ng1KIDuFMed4Zp8i0s5Gq36t7fHrOAsbQvjrIgLacpJjMvOKZwtqm_LtxQ"
     });
 
-    await set(ref(db, "devices/iphone1"), token);
+    if (!token) {
+      throw new Error("Token is null (service worker or registration issue)");
+    }
 
     document.body.innerHTML += `
-      <div style="padding:10px; word-break:break-all;">
+      <div>
         <h3>FCM TOKEN:</h3>
         <p>${token}</p>
-        <p>TOKEN SAVED</p>
       </div>
     `;
 
@@ -1439,7 +1446,5 @@ async function getFCMToken() {
 }
 
 getFCMToken();
-
-
 
 

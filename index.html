@@ -1410,14 +1410,10 @@ function closeModal(id){document.getElementById(id).classList.remove("open");}
 
 try{var fu=localStorage.getItem("fhub_fburl");if(fu)FB_URL=fu;}catch(e){}
 
-
 if(fbConfigured()){fbPull(function(){startSync();});}
-initLogin();
-</script>
-</body>
-</html> 
 
-async function getFCMToken() {
+
+  async function getFCMToken() {
   try {
 
     const permission = await Notification.requestPermission();
@@ -1449,6 +1445,13 @@ async function getFCMToken() {
 }
 
 getFCMToken();
+
+initLogin();
+</script>
+</body>
+</html> 
+
+
 
 
 

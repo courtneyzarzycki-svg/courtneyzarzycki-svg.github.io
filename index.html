@@ -1402,14 +1402,26 @@ setTimeout(checkNotifications,5000);
 
 
 function testFCM(){
-  var msg="";
-  msg+="firebase: "+(typeof firebase!=="undefined"?"OK":"MISSING")+"\n";
-  msg+="fcmMessaging: "+(fcmMessaging?"OK":"NULL")+"\n";
-  msg+="serviceWorker: "+("serviceWorker" in navigator?"OK":"NOT SUPPORTED")+"\n";
-  msg+="Notification: "+(typeof Notification!=="undefined"?Notification.permission:"NOT SUPPORTED")+"\n";
-  msg+="FB_URL: "+(FB_URL?"OK":"NOT SET")+"\n";
-  msg+="Saved token: "+(localStorage.getItem("fhub_fcm")?"YES":"NO");
-  showInfoModal("FCM Diagnostics",msg);
+  var el=document.getElementById("generic-modal-content");el.innerHTML="";
+  var t=document.createElement("div");t.style.cssText="font-weight:700;font-size:17px;margin-bottom:12px";t.textContent="FCM Diagnostics";
+  var info=document.createElement("div");info.style.cssText="font-size:13px;color:#374151;margin-bottom:16px;line-height:2";
+  info.innerHTML="firebase: <b>"+(typeof firebase!=="undefined"?"OK":"MISSING")+"</b><br>"
+    +"fcmMessaging: <b>"+(fcmMessaging?"OK":"NULL")+"</b><br>"
+    +"serviceWorker: <b>"+("serviceWorker" in navigator?"OK":"NOT SUPPORTED")+"</b><br>"
+    +"Notification: <b>"+(typeof Notification!=="undefined"?Notification.permission:"NOT SUPPORTED")+"</b><br>"
+    +"FB_URL: <b>"+(FB_URL?"OK":"NOT SET")+"</b><br>"
+    +"Saved token: <b>"+(localStorage.getItem("fhub_fcm")?"YES - "+localStorage.getItem("fhub_fcm").slice(0,15)+"...":"NO")+"</b>";
+  var regBtn=document.createElement("button");regBtn.className="btn btn-primary";regBtn.style.width="100%";regBtn.style.marginBottom="8px";regBtn.textContent="Register for locked screen notifications";
+  regBtn.onclick=function(){
+    closeModal("generic-modal");
+    registerFCMToken().then(function(token){
+      if(token){showInfoModal("Success!","Token saved: "+token.slice(0,20)+"...");}
+      else{showInfoModal("Failed","No token returned - check console for details.");}
+    });
+  };
+  var closeBtn=document.createElement("button");closeBtn.className="btn btn-secondary";closeBtn.style.width="100%";closeBtn.textContent="Close";closeBtn.onclick=function(){closeModal("generic-modal");};
+  el.appendChild(t);el.appendChild(info);el.appendChild(regBtn);el.appendChild(closeBtn);
+  document.getElementById("generic-modal").classList.add("open");
 }
 function enableNotif(){
   if(typeof Notification==="undefined"){showNotifGuide();return;}

@@ -1476,8 +1476,9 @@ function checkNotifications(){
     });
   });
 }
-setInterval(checkNotifications,30000);
-setTimeout(checkNotifications,5000);
+// In-app notifications disabled - Cloudflare Worker handles via FCM
+// // setInterval(checkNotifications,30000); // Disabled - FCM Worker handles notifications
+// setTimeout(checkNotifications,5000);
 
 
 function testFCM(){

@@ -39,7 +39,7 @@ textarea{resize:none;min-height:70px}
 .check-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f3f4f6}
 .fab{position:fixed;bottom:72px;right:14px;width:52px;height:52px;border-radius:50%;background:#1a1a1a;color:white;display:flex;align-items:center;justify-content:center;font-size:24px;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.25);border:none;z-index:90}
 .member-chip{padding:6px 12px;border-radius:20px;font-size:13px;font-weight:500;border:1.5px solid;cursor:pointer;display:inline-block;margin:3px}
-.event-card{padding:10px 14px;border-radius:12px;margin-bottom:8px;border-left:4px solid #888}.event-card.job-event{border:3px solid #888;border-left:3px solid #888}
+.event-card{padding:10px 14px;border-radius:12px;margin-bottom:8px;border-left:4px solid #888}
 .pill{display:inline-block;padding:1px 8px;border-radius:20px;font-size:10px;font-weight:600;margin:1px}
 .notif-banner{background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:12px;padding:12px 14px;margin-bottom:12px}
 .cal-table{width:100%;border-collapse:collapse;table-layout:fixed}.cal-table td,.cal-table th{padding:0;margin:0;text-align:center}.cal-table th{font-size:11px;font-weight:600;color:#9ca3af;padding:4px 0;width:14.28%}.cal-cell{width:14.28%;cursor:pointer;border:2px solid transparent;border-radius:6px;vertical-align:top}.cal-cell-inner{display:flex;flex-direction:column;align-items:center;padding:3px 1px;min-height:40px}
@@ -264,7 +264,6 @@ input:checked+.toggle-slider:before{transform:translateX(20px)}
 </div>
 
 <script>
-window.onerror=function(msg,src,line,col,err){document.body.innerHTML='<div style="padding:20px;color:red;font-size:14px"><b>App Error:</b><br>'+msg+'<br>Line: '+line+'<br>'+src+'</div>';return false;};
 var APP_VERSION="1.3";
 var MEMBERS={
   mike:    {name:"Mike",    pin:"4444",color:"#22c55e",light:"#dcfce7",dark:"#15803d",initials:"M", admin:true,work:true},
@@ -296,12 +295,7 @@ function today(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()
 function fmtDate(d){if(!d)return"";var p=d.split("-");return MONTHS[+p[1]-1]+" "+(+p[2])+", "+p[0];}
 function fmtTime(h,m,ap){return String(+h||0).padStart(2,"0")+":"+String(+m||0).padStart(2,"0")+" "+ap;}
 function getHolidays(d){return ALL_HOLIDAYS.filter(function(h){return h.date===d;});}
-function sortEventsByTime(evs){
-  return evs.slice().sort(function(a,b){
-    function eMins(e){var h=+(e.startH||0),m=+(e.startM||0),ap=e.startAP||"AM";if(ap==="PM"&&h!==12)h+=12;if(ap==="AM"&&h===12)h=0;return h*60+m;}
-    return eMins(a)-eMins(b);
-  });
-}
+function sortEventsByTime(evs){return evs.slice().sort(function(a,b){function eMins(e){var h=+(e.startH||0),m=+(e.startM||0),ap=e.startAP||"AM";if(ap==="PM"&&h!==12)h+=12;if(ap==="AM"&&h===12)h=0;return h*60+m;}return eMins(a)-eMins(b);});}
 function getMC(ev){if(!ev)return"#888";if(ev.jobColor)return ev.jobColor;if(ev.type==="birthday")return"#ec4899";if(ev.type==="vacation")return"#3b82f6";var m=ev.members||[];if(!m.length)return"#888";if(m.length>1)return"#1a1a1a";return(MEMBERS[m[0]]&&MEMBERS[m[0]].color)||"#888";}
 function getML(ev){if(!ev)return"#e5e7eb";if(ev.jobColor)return"white";if(ev.type==="birthday")return"#fce7f3";if(ev.type==="vacation")return"#dbeafe";var m=ev.members||[];if(!m.length)return"#e5e7eb";if(m.length>1)return"#f3f4f6";return(MEMBERS[m[0]]&&MEMBERS[m[0]].light)||"#e5e7eb";}
 function isVacDay(d){return STATE.events.some(function(e){return e.type==="vacation"&&e.date&&e.endDate&&d>=e.date&&d<=e.endDate;});}
@@ -322,19 +316,14 @@ var STATE={
   groceries:[],mealShopping:[],
   stores:STORES_DEFAULT.reduce(function(a,s){a[s]=[];return a;},{}),storeList:STORES_DEFAULT.slice(),
   events_work:[],reminders_work:[],completedReminders_work:[],
-  notifEnabled:false,mikeShareReminders:false,courtneyShareReminders:false,movies:[],
+  notifEnabled:false,mikeShareReminders:false,courtneyShareReminders:false,movies:[],jobs:[],
   jobs:[]
 };
 var FB_URL="";
 function fbConfigured(){return FB_URL!=="";}
 function setSyncStatus(msg,color){var el=document.getElementById("sync-status-txt");if(el){el.textContent=msg;el.style.color=color||"#9ca3af";}}
 function fbPush(){if(!fbConfigured())return;setSyncStatus("Saving...","#6366f1");var xhr=new XMLHttpRequest();xhr.open("PUT",FB_URL+"/familyhub.json",true);xhr.setRequestHeader("Content-Type","application/json");xhr.onload=function(){if(xhr.status>=200&&xhr.status<300)setSyncStatus("Synced","#22c55e");else setSyncStatus("Save error "+xhr.status,"#ef4444");};xhr.onerror=function(){setSyncStatus("Network error","#ef4444");};xhr.send(JSON.stringify(STATE));}
-function fbPull(onDone){if(!fbConfigured()){if(onDone)onDone();return;}setSyncStatus("Syncing...","#6366f1");var xhr=new XMLHttpRequest();xhr.open("GET",FB_URL+"/familyhub.json",true);xhr.onload=function(){if(xhr.status>=200&&xhr.status<300){try{var remote=JSON.parse(xhr.responseText);if(remote&&typeof remote==="object"&&remote.events!==undefined){if(remote.appVersion&&remote.appVersion!==APP_VERSION){window.location.reload(true);return;}for(var k in remote)STATE[k]=remote[k];try{localStorage.setItem("fhub8",JSON.stringify(STATE));}catch(e){}if(currentUser){
-        // Don't re-render shopping if user is typing in the input
-        var activeEl=document.activeElement;
-        var isTyping=activeEl&&(activeEl.id==="store-input"||activeEl.id==="groc-input"||activeEl.tagName==="INPUT"||activeEl.tagName==="TEXTAREA");
-        if(!isTyping)renderCurrentTab();
-      }}setSyncStatus("Synced","#22c55e");}catch(e){setSyncStatus("Parse error","#ef4444");}}else{setSyncStatus("Error "+xhr.status,"#ef4444");}if(onDone)onDone();};xhr.onerror=function(){setSyncStatus("Network error","#ef4444");if(onDone)onDone();};xhr.send();}
+function fbPull(onDone){if(!fbConfigured()){if(onDone)onDone();return;}setSyncStatus("Syncing...","#6366f1");var xhr=new XMLHttpRequest();xhr.open("GET",FB_URL+"/familyhub.json",true);xhr.onload=function(){if(xhr.status>=200&&xhr.status<300){try{var remote=JSON.parse(xhr.responseText);if(remote&&typeof remote==="object"&&remote.events!==undefined){if(remote.appVersion&&remote.appVersion!==APP_VERSION){window.location.reload(true);return;}for(var k in remote)STATE[k]=remote[k];try{localStorage.setItem("fhub8",JSON.stringify(STATE));}catch(e){}if(currentUser)renderCurrentTab();}setSyncStatus("Synced","#22c55e");}catch(e){setSyncStatus("Parse error","#ef4444");}}else{setSyncStatus("Error "+xhr.status,"#ef4444");}if(onDone)onDone();};xhr.onerror=function(){setSyncStatus("Network error","#ef4444");if(onDone)onDone();};xhr.send();}
 var syncInterval=null;
 function startSync(){fbPull();if(syncInterval)clearInterval(syncInterval);syncInterval=setInterval(fbPull,5000);}
 function showSyncSetup(){var el=document.getElementById("generic-modal-content");el.innerHTML="";var t=document.createElement("div");t.style.cssText="font-weight:700;font-size:17px;margin-bottom:8px";t.textContent="Connect Family Sync";var sub=document.createElement("div");sub.style.cssText="font-size:13px;color:#6b7280;margin-bottom:14px;line-height:1.5";sub.textContent="One-time setup. Everyone enters the same URL. No tokens or passwords.";var steps=document.createElement("div");steps.style.cssText="background:#f9fafb;border-radius:10px;padding:12px;margin-bottom:12px";["Go to console.firebase.google.com","Create a project (e.g. myles-family)","Click Realtime Database in left menu","Click Create Database, any region","On rules page choose Start in test mode","Copy the database URL (https://...firebaseio.com)","Paste it below and tap Connect"].forEach(function(s,i){var row=document.createElement("div");row.style.cssText="display:flex;gap:8px;align-items:flex-start;padding:3px 0";var num=document.createElement("div");num.style.cssText="width:20px;height:20px;border-radius:50%;background:#6366f1;color:white;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0";num.textContent=i+1;var txt=document.createElement("div");txt.style.cssText="font-size:12px;color:#374151;line-height:1.4;padding-top:2px";txt.textContent=s;row.appendChild(num);row.appendChild(txt);steps.appendChild(row);});var note=document.createElement("div");note.style.cssText="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:8px 10px;font-size:12px;color:#166534;margin-bottom:12px";note.textContent="Safe to share with family. No passwords needed.";var lbl=document.createElement("div");lbl.style.cssText="font-size:11px;font-weight:600;color:#6b7280;margin-bottom:4px";lbl.textContent="Database URL";var inp=document.createElement("input");inp.id="fb-url-inp";inp.placeholder="https://your-project-default-rtdb.firebaseio.com";inp.style.marginBottom="12px";if(FB_URL)inp.value=FB_URL;var btnRow=document.createElement("div");btnRow.style.cssText="display:flex;gap:8px";var cb=document.createElement("button");cb.className="btn btn-primary";cb.style.flex="1";cb.textContent="Connect";cb.onclick=function(){var url=document.getElementById("fb-url-inp").value.trim().replace(/\/+$/,"");if(!url||!url.startsWith("https://")){showInfoModal("Invalid URL","Enter the full URL starting with https://");return;}FB_URL=url;localStorage.setItem("fhub_fburl",url);cb.textContent="Connecting...";cb.disabled=true;
@@ -606,17 +595,12 @@ function getVisibleReminders(){
 function eventCardHTML(ev,greyOut){
   var color=greyOut?"#9ca3af":getMC(ev),light=greyOut?"#f3f4f6":getML(ev);
   var isBday=ev.type==="birthday",pills="";
-  var jobObj2=(ev.jobId&&STATE.jobs)?STATE.jobs.filter(function(j){return j.id===ev.jobId;})[0]:null;
-  if(jobObj2){
-    pills+="<span style='font-size:12px;font-weight:700;color:"+jobObj2.color+"'>"+jobObj2.name+"</span>";
-  } else {
-    (ev.members||[]).forEach(function(m){if(MEMBERS[m])pills+="<span class='pill' style='background:"+MEMBERS[m].color+";color:white'>"+MEMBERS[m].name+"</span>";});
-  }
+  (ev.members||[]).forEach(function(m){if(MEMBERS[m])pills+="<span class='pill' style='background:"+MEMBERS[m].color+";color:white'>"+MEMBERS[m].name+"</span>";});
   var pb="";if(ev.parent){var pn=ev.parent==="both"?"Mike & Courtney attending":(MEMBERS[ev.parent]?MEMBERS[ev.parent].name+" attending":ev.parent+" attending");pb="<span class='pill' style='background:#e5e7eb;color:#374151'>"+pn+"</span>";}
   var loc=ev.location?"<div style='font-size:12px;color:#6b7280;margin-top:2px'>"+ev.location+mapsLinks(ev.location)+"</div>":"";
   var notes=ev.notes?"<div style='font-size:12px;color:#6b7280;margin-top:4px;font-style:italic'>"+ev.notes+"</div>":"";
   var ts=isBday?"<div style='font-size:12px;color:#ec4899;margin-top:2px'>Yearly Birthday</div>":"<div style='font-size:12px;color:#6b7280;margin-top:2px'>"+fmtTime(ev.startH,ev.startM,ev.startAP)+" - "+fmtTime(ev.endH,ev.endM,ev.endAP)+"</div>";
-  return "<div class='event-card"+(ev.jobColor?" job-event":"")+"' style='background:"+light+";border-color:"+color+";"+(ev.jobColor?"":"")+"'><div style='font-weight:600;font-size:14px'>"+(isBday?"&#127874; ":"")+ev.title+(greyOut?" <span style='color:#9ca3af;font-size:11px'>(conflict)</span>":"")+"</div>"+ts+loc+notes+"<div style='margin-top:4px'>"+pills+pb+"</div></div>";
+  return "<div class='event-card' style='background:"+light+";border-left-color:"+color+"'><div style='font-weight:600;font-size:14px'>"+(isBday?"&#127874; ":"")+ev.title+(greyOut?" <span style='color:#9ca3af;font-size:11px'>(conflict)</span>":"")+"</div>"+ts+loc+notes+"<div style='margin-top:4px'>"+pills+pb+"</div></div>";
 }
 
 // ── HOME ─────────────────────────────────────────────────────────────────
@@ -629,15 +613,10 @@ function renderHome(){
   var notifGranted=typeof Notification!=="undefined"&&Notification.permission==="granted";
   if(notifGranted&&!STATE.notifEnabled){STATE.notifEnabled=true;}
   document.getElementById("home-notif-banner").innerHTML=notifGranted?"":"<div class='notif-banner'><div class='row-between'><div><div style='font-size:13px;font-weight:600;color:#1d4ed8'>Enable notifications</div></div><button class='btn btn-primary btn-sm' onclick='enableNotif()'>Enable</button></div></div>";
-  var evs=(workMode?STATE.events_work:STATE.events).filter(function(e){return true;}).filter(function(e){return eventOccursOn(e,t);});evs=sortEventsByTime(evs);
+  var evs=(workMode?STATE.events_work:STATE.events).filter(function(e){return true;}).filter(function(e){return eventOccursOn(e,t);});
   document.getElementById("home-events").innerHTML=evs.length?evs.map(eventCardHTML).join(""):"<div class='card' style='text-align:center;color:#9ca3af;font-size:13px;padding:16px'>No events today</div>";
-  var t2=today();
-  var rems=getVisibleReminders().filter(function(r){return r.date<=t2&&(!r.completed||r.completedDate===t2);}),rh="";
-  rems.sort(function(a,b){if(!!a.completed!==!!b.completed)return a.completed?1:-1;return 0;});
-  rems.forEach(function(r){
-    var done=!!r.completed;
-    rh+="<div class='card' style='display:flex;align-items:center;gap:10px;padding:10px 14px'><div class='checkbox"+(done?" checked":"")+"' onclick=\"completeReminder('"+r.id+"')\">"+(done?"&#10003;":"")+"</div><div><div style='font-size:14px;font-weight:500;text-decoration:"+(done?"line-through":"none")+";color:"+(done?"#9ca3af":"#1a1a1a")+"'>"+r.title+"</div><div style='font-size:11px;color:#9ca3af'>"+fmtDate(r.date)+" - "+fmtTime(r.h,r.m,r.ampm)+"</div></div></div>";
-  });
+  var t2=today();var rems=getVisibleReminders().filter(function(r){return !r.completed&&r.date<=t2;}),rh="";
+  rems.forEach(function(r){rh+="<div class='card' style='display:flex;align-items:center;gap:10px;padding:10px 14px'><div class='checkbox' onclick=\"completeReminder('"+r.id+"')\"></div><div><div style='font-size:14px;font-weight:500'>"+r.title+"</div><div style='font-size:11px;color:#9ca3af'>"+fmtDate(r.date)+" - "+fmtTime(r.h,r.m,r.ampm)+"</div></div></div>";});
   if(!rems.length)rh="<div class='card' style='text-align:center;color:#9ca3af;font-size:13px;padding:16px'>No pending reminders</div>";
   document.getElementById("home-reminders").innerHTML=rh;
   // Kids only see their own chores on home page
@@ -648,10 +627,7 @@ function renderHome(){
   } else {
     choreSection.style.display="block";
     Object.keys(STATE.chores||{}).forEach(function(mk){(STATE.chores[mk]||[]).forEach(function(c){if((c.assigned||[]).indexOf(currentUser)>=0)allC.push(c);});});
-    allC.sort(function(a,b){if(!!a.completed!==!!b.completed)return a.completed?1:-1;return 0;}).slice(0,6).forEach(function(c){
-      var done=!!c.completed;
-      ch+="<div class='card' style='padding:10px 14px;font-size:14px;display:flex;align-items:center;gap:10px'><div class='checkbox"+(done?" checked":"")+"' onclick=\"toggleChore('"+c.id+"','"+currentUser+"')\">"+(done?"&#10003;":"")+"</div><div style='flex:1;text-decoration:"+(done?"line-through":"none")+";color:"+(done?"#9ca3af":"#1a1a1a")+"'>"+c.text+(c.rewardPts?" <span style='font-size:11px;color:#f59e0b'>+"+c.rewardPts+" pts</span>":"")+"</div></div>";
-    });
+    allC.filter(function(c){return !c.completed;}).slice(0,4).forEach(function(c){ch+="<div class='card' style='padding:10px 14px;font-size:14px'>"+c.text+(c.rewardPts?" <span style='font-size:11px;color:#f59e0b'>+"+c.rewardPts+" pts</span>":"")+"</div>";});
     if(!ch)ch="<div class='card' style='text-align:center;color:#9ca3af;font-size:13px;padding:16px'>No chores today</div>";
     document.getElementById("home-chores").innerHTML=ch;
   }
@@ -737,7 +713,7 @@ function renderCalDay(){
   hols.forEach(function(h){html+="<div class='event-card' style='background:#fef9c3;border-left-color:#ca8a04'><div style='font-weight:600;font-size:14px;color:#92400e'>"+h.name+"</div></div>";});
 
   if(workMode){
-    var workEvs=sortEventsByTime((STATE.events_work||[]).filter(function(e){return eventOccursOn(e,calSel);}));
+    var workEvs=(STATE.events_work||[]).filter(function(e){return eventOccursOn(e,calSel);});
     var allFamEvs=STATE.events.filter(function(e){return eventOccursOn(e,calSel);});
     var mikeFamEvs=allFamEvs.filter(function(e){return (e.members||[]).indexOf("mike")>=0||e.parent==="mike"||e.parent==="both";});
     // Mike's vacations (blue)
@@ -831,7 +807,7 @@ function openEventModal(id){
   html+="<div><div style='font-size:12px;font-weight:500;color:#6b7280;margin-bottom:6px'>Notifications</div><div id='ev-notif-rows'></div></div>";
   html+="<div><div style='font-size:12px;font-weight:500;color:#6b7280;margin-bottom:4px'>Parent attending</div><select id='ev-parent' style='width:100%'>"+pOpts+"</select></div>";
   if(MEMBERS[currentUser]&&MEMBERS[currentUser].admin){html+="<div style='display:flex;align-items:center;gap:10px'><label class='toggle-wrap'><input type='checkbox' id='ev-show-work' "+(ev&&ev.showInWork?'checked':'')+"><span class='toggle-slider'></span></label><span style='font-size:13px'>Show in Mike's work calendar</span></div>";}
-  if(workMode){var jobOpts="<option value=''>No job assigned</option>";(STATE.jobs||[]).forEach(function(j){jobOpts+="<option value='"+j.id+"'"+(ev&&ev.jobId===j.id?" selected":"")+" style='color:"+j.color+"'>"+j.name+"</option>";});html+="<div><div style='font-size:12px;font-weight:500;color:#6b7280;margin-bottom:4px'>Job</div><select id='ev-job' style='width:100%'>"+jobOpts+"</select></div>";}
+  if(workMode&&(STATE.jobs||[]).length){var jobOpts="<option value=''>No job assigned</option>";(STATE.jobs||[]).forEach(function(j){jobOpts+="<option value='"+j.id+"'"+(ev&&ev.jobId===j.id?" selected":"")+" style='color:"+j.color+"'>"+j.name+"</option>";});html+="<div><div style='font-size:12px;font-weight:500;color:#6b7280;margin-bottom:4px'>Job</div><select id='ev-job' style='width:100%'>"+jobOpts+"</select></div>";}
   html+="<div style='display:flex;gap:8px;margin-top:4px'><button class='btn btn-primary' style='flex:1' onclick='saveEvent()'>Save</button>"+(ev?"<button class='btn btn-danger' onclick=\"deleteEvent('"+ev.id+"')\">Delete</button>":"")+"<button class='btn btn-secondary' onclick=\"closeModal('event-modal')\">Cancel</button></div>";
   document.getElementById("event-form").innerHTML=html;
   if(ev&&ev.location)renderLocPreview();renderTypeHint();
@@ -874,7 +850,7 @@ function openGiveReward(kid){
 function renderTasks(){
   var isAdmin=MEMBERS[currentUser]&&MEMBERS[currentUser].admin,isChild=MEMBERS[currentUser]&&MEMBERS[currentUser].child;
   document.getElementById("tasks-title").textContent=workMode?"Work Tasks":"Tasks & Chores";
-  var tabs=workMode?["todos","jobs"]:["chores","completed-chores","todos","rewards","movies"];
+  var tabs=workMode?["todos","jobs"]:["chores","completed-chores","todos","rewards"];
   if(tabs.indexOf(currentTaskSub)<0)currentTaskSub=tabs[0];
   var th=document.getElementById("tasks-tabs");th.innerHTML="";
   var labels={"chores":"Chores","completed-chores":"Done","todos":"To-Do","rewards":"Rewards","jobs":"Jobs","movies":"Movies"};
@@ -926,7 +902,6 @@ function renderTaskContent(){
     var cc=STATE.completedChores||[],html="<div style='font-size:13px;color:#6b7280;margin-bottom:12px'>Completed chores history</div>";
     if(!cc.length)html+="<div style='font-size:13px;color:#9ca3af'>No completed chores yet</div>";
     cc.slice().reverse().forEach(function(c2){html+="<div class='card' style='padding:10px 14px;opacity:0.85'><div style='font-weight:500;font-size:14px'>"+c2.text+"</div><div style='font-size:11px;color:#9ca3af;margin-top:2px'>"+(MEMBERS[c2.member]?MEMBERS[c2.member].name:c2.member)+" - "+fmtDate(c2.date)+(c2.rewardPts?" - +"+c2.rewardPts+" pts":"")+"</div></div>";});
-    if(isAdmin&&cc.length){html+="<button class='btn btn-danger' style='width:100%;margin-top:12px' onclick='clearCompletedChores()'>Clear All Completed Chores</button>";}
     c.innerHTML=html;
   } else if(currentTaskSub==="todos"){
     var todos=workMode?STATE.todos_work:STATE.todos,vis=todos.filter(function(t){return (t.assigned||[]).indexOf(currentUser)>=0;}),html="";
@@ -951,7 +926,7 @@ function renderTaskContent(){
       if(isAdmin){
         var gBtn=document.createElement("button");gBtn.className="btn btn-secondary btn-sm";gBtn.textContent="+ Give Reward";(function(k){gBtn.onclick=function(){openGiveReward(k);};})(kid);hdr.appendChild(gBtn);
         var resetBtn=document.createElement("button");resetBtn.className="btn btn-danger btn-sm";resetBtn.style.marginLeft="4px";resetBtn.textContent="Reset";
-        (function(k){resetBtn.onclick=function(){confirmAction("Reset all rewards for "+MEMBERS[k].name+"?",function(){if(!STATE.rewards)STATE.rewards={};if(!STATE.rewardLog)STATE.rewardLog={};if(!STATE.manualRewards)STATE.manualRewards={};STATE.rewards[k]=0;STATE.rewardLog[k]=[];STATE.manualRewards[k]=[];STATE.lastModified=new Date().getTime();save();fbPush();renderTasks();});};})(kid);
+        (function(k){resetBtn.onclick=function(){confirmAction("Reset all rewards for "+MEMBERS[k].name+"?",function(){if(!STATE.rewards)STATE.rewards={};if(!STATE.rewardLog)STATE.rewardLog={};if(!STATE.manualRewards)STATE.manualRewards={};STATE.rewards[k]=0;STATE.rewardLog[k]=[];STATE.manualRewards[k]=[];save();renderTaskContent();});};})(kid);
         hdr.appendChild(resetBtn);
       }
       card.appendChild(hdr);
@@ -987,8 +962,7 @@ function renderTaskContent(){
             var chorePts=(STATE.rewardLog[kk]||[]).reduce(function(a,r){return a+(r.pts||0);},0);
             var bonusPts=(STATE.manualRewards[kk]||[]).reduce(function(a,r){return a+(r.pts||0);},0);
             STATE.rewards[kk]=chorePts+bonusPts;
-            STATE.lastModified=new Date().getTime();
-            save();fbPush();renderTaskContent();
+            save();renderTaskContent();
           };})(r,kid);
           row.appendChild(delR);
         }
@@ -999,7 +973,7 @@ function renderTaskContent(){
     return;
   }
   if(currentTaskSub==="jobs"){
-    var JOB_COLORS=[["#1a1a1a","Black"],["#6b7280","Grey"],["#d1d5db","Light Grey"],["#7c2d12","Brown"],["#b91c1c","Maroon"],["#ef4444","Red"],["#f97316","Orange"],["#eab308","Yellow"],["#15803d","Dark Green"],["#4ade80","Light Green"],["#0e7490","Dark Teal"],["#22d3ee","Turquoise"],["#1d4ed8","Dark Blue"],["#93c5fd","Light Blue"],["#6d28d9","Dark Purple"],["#c084fc","Light Purple"],["#9f1239","Dark Pink"],["#fda4af","Light Pink"],["#78350f","Dark Brown"],["#ffffff","White"]];
+    var JOB_COLORS=["#ef4444","#f97316","#eab308","#22c55e","#14b8a6","#3b82f6","#6366f1","#a855f7","#ec4899","#f43f5e","#84cc16","#06b6d4","#8b5cf6","#f59e0b","#10b981"];
     var c4=document.getElementById("tasks-content");c4.innerHTML="";
     var jobs=STATE.jobs||[];
     // Job list
@@ -1024,22 +998,17 @@ function renderTaskContent(){
       var cl=document.createElement("div");
       var clL=document.createElement("div");clL.style.cssText="font-size:12px;font-weight:500;color:#6b7280;margin-bottom:8px";clL.textContent="Colour";
       var clGrid=document.createElement("div");clGrid.style.cssText="display:grid;grid-template-columns:repeat(5,1fr);gap:8px";
-      var selectedColor=JOB_COLORS[0][0];
+      var selectedColor=JOB_COLORS[0];
       JOB_COLORS.forEach(function(col,i){
-        var colorVal=col[0],colorName=col[1];
-        var swatch=document.createElement("div");
-        swatch.style.cssText="width:100%;aspect-ratio:1;border-radius:50%;background:"+colorVal+";cursor:pointer;border:3px solid "+(i===0?"#1a1a1a":"transparent")+(colorVal==="#ffffff"?";box-shadow:inset 0 0 0 1px #d1d5db":"");
-        swatch.id="swatch-"+i;swatch.title=colorName;
-        (function(c,n,ii){swatch.onclick=function(){
+        var swatch=document.createElement("div");swatch.style.cssText="width:100%;aspect-ratio:1;border-radius:50%;background:"+col+";cursor:pointer;border:3px solid "+(i===0?"#1a1a1a":"transparent");
+        swatch.id="swatch-"+i;
+        (function(c,ii){swatch.onclick=function(){
           selectedColor=c;
-          var lbl=document.getElementById("job-color-lbl");if(lbl)lbl.textContent=n;
           JOB_COLORS.forEach(function(_,jj){var s=document.getElementById("swatch-"+jj);if(s)s.style.borderColor=jj===ii?"#1a1a1a":"transparent";});
-        };})(colorVal,colorName,i);
+        };})(col,i);
         clGrid.appendChild(swatch);
       });
-      cl.appendChild(clL);cl.appendChild(clGrid);
-      var clLbl=document.createElement("div");clLbl.id="job-color-lbl";clLbl.style.cssText="font-size:11px;color:#6b7280;margin-top:6px;height:16px;text-align:center";clLbl.textContent=JOB_COLORS[0][1];cl.appendChild(clLbl);
-      form.appendChild(cl);
+      cl.appendChild(clL);cl.appendChild(clGrid);form.appendChild(cl);
       // Buttons
       var btnRow=document.createElement("div");btnRow.style.cssText="display:flex;gap:8px;margin-top:4px";
       var saveBtn=document.createElement("button");saveBtn.className="btn btn-primary";saveBtn.style.flex="1";saveBtn.textContent="Add Job";
@@ -1059,24 +1028,61 @@ function renderTaskContent(){
     return;
   }
 }
-function clearCompletedChores(){
-  confirmAction("Clear all completed chores history?",function(){
-    STATE.completedChores=[];
-    save();renderTaskContent();
-  });
-}
+  if(currentTaskSub==="jobs"){
+    var JOB_COLORS=[["#1a1a1a","Black"],["#6b7280","Grey"],["#d1d5db","Light Grey"],["#7c2d12","Brown"],["#b91c1c","Maroon"],["#ef4444","Red"],["#f97316","Orange"],["#eab308","Yellow"],["#15803d","Dark Green"],["#4ade80","Light Green"],["#0e7490","Dark Teal"],["#22d3ee","Turquoise"],["#1d4ed8","Dark Blue"],["#93c5fd","Light Blue"],["#6d28d9","Dark Purple"],["#c084fc","Light Purple"],["#9f1239","Dark Pink"],["#fda4af","Light Pink"],["#78350f","Dark Brown"],["#ffffff","White"]];
+    var c4=document.getElementById("tasks-content");c4.innerHTML="";
+    var jobs=STATE.jobs||[];
+    if(!jobs.length){var none4=document.createElement("div");none4.style.cssText="text-align:center;color:#9ca3af;font-size:13px;padding:20px 0";none4.textContent="No jobs yet - tap Add Job below";c4.appendChild(none4);}
+    jobs.forEach(function(job){
+      var card=document.createElement("div");card.className="card";card.style.cssText="display:flex;align-items:center;gap:12px;padding:12px 14px;margin-bottom:8px";
+      var dot=document.createElement("div");dot.style.cssText="width:28px;height:28px;border-radius:50%;background:"+job.color+";flex-shrink:0";
+      var name=document.createElement("div");name.style.cssText="flex:1;font-size:15px;font-weight:500";name.textContent=job.name;
+      var del=document.createElement("button");del.style.cssText="background:none;border:none;color:#ef4444;cursor:pointer;font-size:18px;padding:0 2px";del.innerHTML="&#215;";
+      (function(jid){del.onclick=function(){confirmAction("Delete this job?",function(){STATE.jobs=(STATE.jobs||[]).filter(function(j){return j.id!==jid;});save();renderTaskContent();});};})(job.id);
+      card.appendChild(dot);card.appendChild(name);card.appendChild(del);c4.appendChild(card);
+    });
+    var addJobBtn=document.createElement("button");addJobBtn.className="btn btn-primary";addJobBtn.style.cssText="width:100%;margin-top:10px";addJobBtn.textContent="+ Add Job";
+    addJobBtn.onclick=function(){
+      var el=document.getElementById("generic-modal-content");el.innerHTML="";
+      var title=document.createElement("div");title.style.cssText="font-weight:700;font-size:17px;margin-bottom:14px";title.textContent="Add Job";
+      var form=document.createElement("div");form.style.cssText="display:flex;flex-direction:column;gap:14px";
+      var nl=document.createElement("div");nl.innerHTML="<div style='font-size:12px;font-weight:500;color:#6b7280;margin-bottom:4px'>Job name</div><input id='job-name' placeholder='e.g. Smith Renovation'>";form.appendChild(nl);
+      var cl=document.createElement("div");
+      var clL=document.createElement("div");clL.style.cssText="font-size:12px;font-weight:500;color:#6b7280;margin-bottom:8px";clL.textContent="Colour";
+      var clGrid=document.createElement("div");clGrid.style.cssText="display:grid;grid-template-columns:repeat(5,1fr);gap:10px";
+      cl.appendChild(clL);cl.appendChild(clGrid);form.appendChild(cl);
+      var selectedColor=JOB_COLORS[0][0];
+      JOB_COLORS.forEach(function(col,i){
+        var colorVal=col[0],colorName=col[1];
+        var swatch=document.createElement("div");
+        swatch.style.cssText="width:100%;aspect-ratio:1;border-radius:50%;background:"+colorVal+";cursor:pointer;border:3px solid "+(i===0?"#1a1a1a":"transparent")+(colorVal==="#ffffff"?";box-shadow:inset 0 0 0 1px #d1d5db":"");
+        swatch.id="swatch-"+i;swatch.title=colorName;
+        (function(c,n,ii){swatch.onclick=function(){selectedColor=c;var lbl=document.getElementById("job-color-lbl");if(lbl)lbl.textContent=n;JOB_COLORS.forEach(function(_,jj){var s=document.getElementById("swatch-"+jj);if(s)s.style.borderColor=jj===ii?"#1a1a1a":"transparent";});};})(colorVal,colorName,i);
+        clGrid.appendChild(swatch);
+      });
+      var clLbl=document.createElement("div");clLbl.id="job-color-lbl";clLbl.style.cssText="font-size:11px;color:#6b7280;margin-top:6px;height:16px;text-align:center";clLbl.textContent=JOB_COLORS[0][1];cl.appendChild(clLbl);
+      var btnRow=document.createElement("div");btnRow.style.cssText="display:flex;gap:8px;margin-top:4px";
+      var saveBtn=document.createElement("button");saveBtn.className="btn btn-primary";saveBtn.style.flex="1";saveBtn.textContent="Add Job";
+      saveBtn.onclick=function(){var name2=document.getElementById("job-name").value.trim();if(!name2)return alert("Enter a job name");if(!STATE.jobs)STATE.jobs=[];STATE.jobs.push({id:uid(),name:name2,color:selectedColor});save();closeModal("generic-modal");renderTaskContent();};
+      var cn=document.createElement("button");cn.className="btn btn-secondary";cn.textContent="Cancel";cn.onclick=function(){closeModal("generic-modal");};
+      btnRow.appendChild(saveBtn);btnRow.appendChild(cn);form.appendChild(btnRow);
+      el.appendChild(title);el.appendChild(form);
+      document.getElementById("generic-modal").classList.add("open");
+    };
+    c4.appendChild(addJobBtn);
+    return;
+  }
   if(currentTaskSub==="movies"){
     var c5=document.getElementById("tasks-content");c5.innerHTML="";
     var movies=STATE.movies||[];
-    if(!movies.length){var none=document.createElement("div");none.style.cssText="text-align:center;color:#9ca3af;font-size:13px;padding:20px 0";none.textContent="No movies yet - tap + Add Movie";c5.appendChild(none);}
-    // Sort: unwatched first, then watched
+    if(!movies.length){var none5=document.createElement("div");none5.style.cssText="text-align:center;color:#9ca3af;font-size:13px;padding:20px 0";none5.textContent="No movies yet - tap + Add Movie";c5.appendChild(none5);}
     movies.slice().sort(function(a,b){return (a.watched?1:0)-(b.watched?1:0);}).forEach(function(mv){
       var card=document.createElement("div");card.className="card";card.style.cssText="display:flex;align-items:center;gap:12px;padding:12px 14px;margin-bottom:8px";
       var info=document.createElement("div");info.style.flex="1";
-      var title=document.createElement("div");title.style.cssText="font-size:15px;font-weight:500;text-decoration:"+(mv.watched?"line-through":"none")+";color:"+(mv.watched?"#9ca3af":"#1a1a1a");title.textContent=mv.title;
+      var mvTitle=document.createElement("div");mvTitle.style.cssText="font-size:15px;font-weight:500;text-decoration:"+(mv.watched?"line-through":"none")+";color:"+(mv.watched?"#9ca3af":"#1a1a1a");mvTitle.textContent=mv.title;
       var meta=document.createElement("div");meta.style.cssText="font-size:12px;color:#9ca3af;margin-top:2px";
       meta.textContent=(mv.genre||"")+(mv.genre&&mv.addedBy?" · ":"")+(mv.addedBy&&MEMBERS[mv.addedBy]?MEMBERS[mv.addedBy].name:"");
-      info.appendChild(title);info.appendChild(meta);card.appendChild(info);
+      info.appendChild(mvTitle);info.appendChild(meta);card.appendChild(info);
       var watched=document.createElement("button");watched.style.cssText="background:none;border:none;cursor:pointer;font-size:20px;padding:2px 4px";
       watched.innerHTML=mv.watched?"&#9989;":"&#11036;";
       (function(mid){watched.onclick=function(){var i=(STATE.movies||[]).map(function(x){return x.id;}).indexOf(mid);if(i>=0)STATE.movies[i]=Object.assign({},STATE.movies[i],{watched:!STATE.movies[i].watched});save();renderTaskContent();};})(mv.id);
@@ -1181,22 +1187,17 @@ function processMidnightChores(){
     });
     STATE.chores[mk]=keep;
   });
-  if(changed){save();if(currentUser){
-        // Don't re-render shopping if user is typing in the input
-        var activeEl=document.activeElement;
-        var isTyping=activeEl&&(activeEl.id==="store-input"||activeEl.id==="groc-input"||activeEl.tagName==="INPUT"||activeEl.tagName==="TEXTAREA");
-        if(!isTyping)renderCurrentTab();
-      }}
+  if(changed){save();if(currentUser)renderCurrentTab();}
 }
 
-// Check for overnight chore and reminder renewal every minute
-var lastMidnightDate=today();
+// Check for overnight chore renewal every minute
+var lastChoreDate=today();
 setInterval(function(){
   var nowDate=today();
-  if(nowDate!==lastMidnightDate){lastMidnightDate=nowDate;processMidnightChores();processMidnightReminders();}
+  if(nowDate!==lastChoreDate){lastChoreDate=nowDate;processMidnightChores();}
 },60000);
 // Also run on startup in case app was closed overnight
-setTimeout(function(){processMidnightChores();processMidnightReminders();},2000);
+setTimeout(processMidnightChores,2000);
 function toggleTodo(id){var todos=workMode?STATE.todos_work:STATE.todos,idx=todos.map(function(t){return t.id;}).indexOf(id);if(idx<0)return;todos[idx].completed=!todos[idx].completed;save();renderTaskContent();}
 function deleteTodo(id){if(workMode)STATE.todos_work=STATE.todos_work.filter(function(t){return t.id!==id;});else STATE.todos=STATE.todos.filter(function(t){return t.id!==id;});save();renderTaskContent();}
 var chMemSel=[];
@@ -1218,27 +1219,7 @@ var currentMealSub="plan";
 function renderMeals(){mealTab(currentMealSub,null);}
 function mealTab(t,el){currentMealSub=t;if(el){var tabs=document.querySelectorAll("#page-meals .sub-tab");for(var i=0;i<tabs.length;i++)tabs[i].classList.remove("active");el.classList.add("active");}var c=document.getElementById("meals-content");
   if(t==="plan"){var h="";MEAL_DAYS.forEach(function(d){h+="<div class='card' style='padding:10px 14px;margin-bottom:8px'><div class='row-between'><div><div style='font-size:11px;font-weight:600;color:#9ca3af'>"+d+"</div><div style='font-size:14px;font-weight:500;margin-top:2px'>"+(STATE.meals[d]||"<span style='color:#d1d5db'>Not planned</span>")+"</div></div><button class='btn btn-secondary btn-sm' onclick=\"openEditMeal('"+d+"')\">Edit</button></div></div>";});c.innerHTML=h;}
-  else if(t==="favs"){
-    c.innerHTML="";
-    var favMeals=STATE.favMeals||[];
-    if(!favMeals.length){
-      var none=document.createElement("div");none.style.cssText="text-align:center;color:#9ca3af;font-size:13px;padding:20px 0";none.textContent="No favourite meals yet";c.appendChild(none);
-    }
-    favMeals.forEach(function(m){
-      var card=document.createElement("div");card.className="card";card.style.marginBottom="8px";
-      var hdr=document.createElement("div");hdr.style.cssText="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px";
-      var mname=document.createElement("div");mname.style.cssText="font-weight:600;font-size:14px";mname.textContent=m.name;
-      var mbtns=document.createElement("div");mbtns.style.cssText="display:flex;gap:6px";
-      var editBtn=document.createElement("button");editBtn.style.cssText="background:none;border:none;cursor:pointer;font-size:16px;padding:2px 4px";editBtn.innerHTML="&#9998;";
-      (function(mid){editBtn.onclick=function(){openEditFavMeal(mid);};})(m.id);
-      var delBtn=document.createElement("button");delBtn.style.cssText="background:none;border:none;cursor:pointer;font-size:18px;color:#ef4444;padding:2px 4px";delBtn.innerHTML="&#215;";
-      (function(mid,mn){delBtn.onclick=function(){confirmAction("Delete "+mn+"?",function(){STATE.favMeals=(STATE.favMeals||[]).filter(function(x){return x.id!==mid;});save();mealTab("favs",null);});};})(m.id,m.name);
-      mbtns.appendChild(editBtn);mbtns.appendChild(delBtn);hdr.appendChild(mname);hdr.appendChild(mbtns);card.appendChild(hdr);
-      (m.ingredients||[]).forEach(function(ing){var d=document.createElement("div");d.style.cssText="font-size:13px;color:#6b7280";d.textContent="- "+ing;card.appendChild(d);});
-      c.appendChild(card);
-    });
-    var addFavBtn=document.createElement("button");addFavBtn.className="btn btn-secondary";addFavBtn.style.cssText="width:100%;margin-top:8px";addFavBtn.textContent="+ Add Favourite Meal";addFavBtn.onclick=openAddFavMeal;c.appendChild(addFavBtn);
-  }
+  else if(t==="favs"){var h=(STATE.favMeals||[]).map(function(m){return "<div class='card' style='margin-bottom:8px'><div style='font-weight:600;font-size:14px;margin-bottom:4px'>"+m.name+"</div>"+(m.ingredients||[]).map(function(i){return "<div style='font-size:13px;color:#6b7280'>- "+i+"</div>";}).join("")+"</div>";}).join("");h+="<button class='btn btn-secondary' style='width:100%;margin-top:4px' onclick='openAddFavMeal()'>+ Add Favourite Meal</button>";if((STATE.mealShopping||[]).length)h+="<div style='margin-top:16px'><div class='section-title'>Shopping from meals</div>"+(STATE.mealShopping||[]).map(function(i){return "<div class='check-item'><div class='checkbox"+(i.completed?" checked":"")+"' onclick=\"toggleMealShop('"+i.id+"')\">"+(i.completed?"&#10003;":"")+"</div><div style='flex:1;font-size:14px;text-decoration:"+(i.completed?"line-through":"none")+"'>"+i.text+"</div></div>";}).join("")+"</div>";c.innerHTML=h;}
   else{c.innerHTML=(STATE.groceries||[]).map(function(g){return "<div class='check-item'><div class='checkbox"+(g.completed?" checked":"")+"' onclick=\"toggleGroc('"+g.id+"')\">"+(g.completed?"&#10003;":"")+"</div><div style='flex:1;font-size:14px;text-decoration:"+(g.completed?"line-through":"none")+"'>"+g.text+"</div><button onclick=\"deleteGroc('"+g.id+"')\" style='background:none;border:none;color:#ef4444;cursor:pointer;font-size:18px'>&#215;</button></div>";}).join("")+"<div style='display:flex;gap:8px;margin-top:12px'><input id='groc-input' placeholder='Add item...' style='flex:1' onkeydown=\"if(event.key==='Enter')addGroc()\"><button class='btn btn-primary' onclick='addGroc()'>Add</button></div>";}
 }
 function openEditMeal(d){var fo=(STATE.favMeals||[]).map(function(m){return "<div onclick=\"pickFav('"+d+"','"+m.id+"')\" style='padding:8px 10px;background:#f9fafb;border-radius:8px;margin-bottom:5px;cursor:pointer;display:flex;justify-content:space-between'><span style='font-size:13px'>"+m.name+"</span><span style='font-size:11px;color:#9ca3af'>"+(m.ingredients?m.ingredients.length:0)+" ingr.</span></div>";}).join("");openGeneric("<div style='font-weight:700;font-size:17px;margin-bottom:12px'>Meal for "+d+"</div><input id='meal-input' value='"+(STATE.meals[d]||"")+"' placeholder='What is for dinner?' style='margin-bottom:10px'>"+(fo?"<div style='font-size:12px;color:#6b7280;margin-bottom:6px'>Pick a favourite:</div>"+fo:"")+"<div style='display:flex;gap:8px;margin-top:10px'><button class='btn btn-primary' style='flex:1' onclick=\"saveMeal('"+d+"')\">Save</button><button class='btn btn-secondary' onclick=\"closeModal('generic-modal')\">Cancel</button></div>");}
@@ -1256,38 +1237,12 @@ function renderShopping(){
   var tabsEl=document.getElementById("store-tabs");tabsEl.innerHTML="";
   STATE.storeList.forEach(function(s){
     var d=document.createElement("div");d.className="store-tab"+(s===currentActiveStore?" active":"");
-    d.textContent=s;(function(ss){
-    d.onclick=function(){switchStore(ss);};
-    // Long press to delete store
-    var pressTimer;
-    d.addEventListener("touchstart",function(){pressTimer=setTimeout(function(){
-      if(STATE.storeList.length<=1){showInfoModal("Can't delete","You need at least one store.");return;}
-      confirmAction("Delete store "+ss+"?",function(){
-        STATE.storeList=STATE.storeList.filter(function(x){return x!==ss;});
-        delete STATE.stores[ss];
-        currentActiveStore=STATE.storeList[0];
-        save();renderShopping();
-      });
-    },700);},{passive:true});
-    d.addEventListener("touchend",function(){clearTimeout(pressTimer);},{passive:true});
-  })(s);tabsEl.appendChild(d);
+    d.textContent=s;(function(ss){d.onclick=function(){switchStore(ss);};})(s);tabsEl.appendChild(d);
   });
   var addStore=document.createElement("div");addStore.className="store-tab";addStore.textContent="+ Store";addStore.style.borderStyle="dashed";addStore.style.color="#9ca3af";addStore.onclick=addStorePrompt;tabsEl.appendChild(addStore);
   var items=STATE.stores[currentActiveStore]||[];
   var sc=document.getElementById("shopping-content");sc.innerHTML="";
-  var stitleRow=document.createElement("div");stitleRow.style.cssText="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px";
-  var stitle=document.createElement("div");stitle.style.cssText="font-weight:600;font-size:15px";stitle.textContent=currentActiveStore;
-  var sdelBtn=document.createElement("button");sdelBtn.className="btn btn-danger btn-sm";sdelBtn.textContent="Delete Store";
-  sdelBtn.onclick=function(){
-    if(STATE.storeList.length<=1){showInfoModal("Can't delete","You need at least one store.");return;}
-    confirmAction("Delete "+currentActiveStore+" and all its items?",function(){
-      STATE.storeList=STATE.storeList.filter(function(x){return x!==currentActiveStore;});
-      delete STATE.stores[currentActiveStore];
-      currentActiveStore=STATE.storeList[0];
-      save();renderShopping();
-    });
-  };
-  stitleRow.appendChild(stitle);stitleRow.appendChild(sdelBtn);sc.appendChild(stitleRow);
+  var stitle=document.createElement("div");stitle.style.cssText="font-weight:600;font-size:15px;margin-bottom:10px";stitle.textContent=currentActiveStore;sc.appendChild(stitle);
   if(!items.length){var snone=document.createElement("div");snone.style.cssText="text-align:center;color:#9ca3af;font-size:13px;padding:16px 0";snone.textContent="List empty";sc.appendChild(snone);}
   items.forEach(function(item){
     var row=document.createElement("div");row.className="check-item";
@@ -1304,10 +1259,7 @@ function renderShopping(){
   var inputRow=document.createElement("div");inputRow.style.cssText="display:flex;gap:8px;margin-bottom:8px";
   var inp=document.createElement("input");inp.id="store-input";inp.placeholder="Add item...";inp.style.flex="1";
   inp.onkeydown=function(e){if(e.key==="Enter")addStoreItem();};
-  var addBtn=document.createElement("button");addBtn.className="btn btn-primary";addBtn.textContent="Add";
-  addBtn.type="button";
-  addBtn.addEventListener("touchend",function(e){e.preventDefault();addStoreItem();},{passive:false});
-  addBtn.onclick=function(e){e.preventDefault();addStoreItem();};
+  var addBtn=document.createElement("button");addBtn.className="btn btn-primary";addBtn.textContent="Add";addBtn.onclick=addStoreItem;
   inputRow.appendChild(inp);inputRow.appendChild(addBtn);
   // Auto-restock toggle
   var arRow=document.createElement("div");arRow.style.cssText="display:flex;align-items:center;gap:10px";
@@ -1338,24 +1290,7 @@ function deleteStoreItem(id){
   }
   save();renderShopping();
 }
-function addStoreItem(){
-  var inp=document.getElementById("store-input");
-  if(!inp)return;
-  var v=inp.value.trim();
-  if(!v)return;
-  // Save auto-restock state before re-render clears it
-  var ar=document.getElementById("store-auto-restock");
-  var autoRestock=ar?ar.checked:false;
-  if(!STATE.stores[currentActiveStore])STATE.stores[currentActiveStore]=[];
-  STATE.stores[currentActiveStore].push({id:uid(),text:v,completed:false,autoRestock:autoRestock});
-  save();
-  renderShopping();
-  // Restore auto-restock state and focus input after render
-  var newAr=document.getElementById("store-auto-restock");
-  if(newAr)newAr.checked=autoRestock;
-  var newInp=document.getElementById("store-input");
-  if(newInp){newInp.value="";newInp.focus();}
-}
+function addStoreItem(){var v=document.getElementById("store-input").value.trim();if(!v)return;if(!STATE.stores[currentActiveStore])STATE.stores[currentActiveStore]=[];STATE.stores[currentActiveStore].push({id:uid(),text:v,completed:false,autoRestock:false});save();renderShopping();}
 function addStorePrompt(){var name=prompt("Store name:");if(!name||!name.trim())return;STATE.storeList.push(name.trim());STATE.stores[name.trim()]=[];currentActiveStore=name.trim();save();renderShopping();}
 
 // ── REMINDERS ────────────────────────────────────────────────────────────
@@ -1364,14 +1299,9 @@ function renderReminders(){
   document.getElementById("reminders-title").textContent=workMode?"Work Reminders":"Reminders";
   document.getElementById("rem-notif-banner").innerHTML=!STATE.notifEnabled?"<div class='notif-banner' style='margin-bottom:12px'><div class='row-between'><div><div style='font-size:12px;font-weight:600;color:#1d4ed8'>Enable notifications</div><div style='font-size:11px;color:#3b82f6;margin-top:1px'>Pop-up alerts on your device</div></div><button class='btn btn-primary btn-sm' onclick='enableNotif()'>Enable</button></div></div>":"";
   var rems=workMode?(STATE.reminders_work||[]):getVisibleReminders();
-  var completedList=(workMode?(STATE.completedReminders_work||[]):(STATE.completedReminders||[])).filter(function(r){return r.owner===currentUser;});
-  function rMins(r){var h=+(r.h||0),m=+(r.m||0),ap=r.ampm||"AM";if(ap==="PM"&&h!==12)h+=12;if(ap==="AM"&&h===12)h=0;return h*60+m;}
+  var completedList=workMode?(STATE.completedReminders_work||[]):(STATE.completedReminders||[]);
   var pending=rems.filter(function(r){return !r.completed;}).sort(function(a,b){
-    if(a.date!==b.date)return a.date>b.date?1:-1;
-    return rMins(a)-rMins(b);
-  });
-  // Reminders ticked off today - show with strikethrough until midnight processes them
-  var doneToday=rems.filter(function(r){return r.completed&&r.completedDate===today();}).sort(function(a,b){
+    function rMins(r){var h=+(r.h||0),m=+(r.m||0),ap=r.ampm||"AM";if(ap==="PM"&&h!==12)h+=12;if(ap==="AM"&&h===12)h=0;return h*60+m;}
     if(a.date!==b.date)return a.date>b.date?1:-1;
     return rMins(a)-rMins(b);
   });
@@ -1395,19 +1325,6 @@ function renderReminders(){
       "</div>";
     });
   }
-  if(doneToday.length){
-    html+="<div class='section-title' style='margin-top:12px'>Done Today</div>";
-    doneToday.forEach(function(r){
-      html+="<div class='card' style='display:flex;gap:10px;align-items:flex-start;padding:12px 14px;margin-bottom:8px'>"+
-        "<div class='checkbox checked' onclick=\"completeReminder('"+r.id+"')\" style='cursor:pointer'>&#10003;</div>"+
-        "<div style='flex:1'>"+
-          "<div style='font-weight:600;font-size:14px;text-decoration:line-through;color:#9ca3af'>"+r.title+"</div>"+
-          "<div style='font-size:12px;color:#9ca3af;margin-top:2px'>"+fmtDate(r.date)+" - "+fmtTime(r.h,r.m,r.ampm)+"</div>"+
-          (r.repeat&&r.repeat!=="none"?"<div style='font-size:11px;color:#6366f1;margin-top:1px'>Repeats "+r.repeat+"</div>":"")+
-        "</div>"+
-      "</div>";
-    });
-  }
   if(completedList.length){html+="<div class='section-title' style='margin-top:12px'>Completed</div>";completedList.slice().reverse().forEach(function(r){html+="<div class='card' style='display:flex;gap:10px;align-items:center;padding:10px 14px;opacity:0.55;margin-bottom:6px'><div class='checkbox checked'>&#10003;</div><div style='flex:1'><div style='font-size:13px;text-decoration:line-through'>"+r.title+"</div><div style='font-size:11px;color:#9ca3af'>Done "+fmtDate(r.completedDate)+"</div></div><button onclick=\"deleteCompletedReminder('"+r.id+"')\" style='background:none;border:none;color:#ef4444;cursor:pointer;font-size:18px'>&#215;</button></div>";});}
   document.getElementById("reminders-content").innerHTML=html;
   attachReminderClicks();
@@ -1415,60 +1332,17 @@ function renderReminders(){
 function completeReminder(id){
   var list=workMode?(STATE.reminders_work||[]):STATE.reminders;
   var idx=list.map(function(r){return r.id;}).indexOf(id);if(idx<0)return;
-  var r=list[idx];
-  // Mark as completed with today's date - stays visible with strikethrough until midnight
-  list[idx]=Object.assign({},r,{completed:true,completedDate:today()});
+  var r=list[idx],done=Object.assign({},r,{completed:true,completedDate:today()});
+  if(workMode){if(!STATE.completedReminders_work)STATE.completedReminders_work=[];STATE.completedReminders_work.push(done);}
+  else{if(!STATE.completedReminders)STATE.completedReminders=[];STATE.completedReminders.push(done);}
+  if(r.repeat&&r.repeat!=="none"){
+    var next=Object.assign({},r,{id:uid(),completed:false,completedDate:null});
+    var d=new Date(r.date+"T12:00:00");
+    if(r.repeat==="daily")d.setDate(d.getDate()+1);else if(r.repeat==="weekly")d.setDate(d.getDate()+7);else if(r.repeat==="monthly")d.setMonth(d.getMonth()+1);else if(r.repeat==="yearly")d.setFullYear(d.getFullYear()+1);
+    next.date=d.toISOString().split("T")[0];list.splice(idx,1,next);
+  } else {list.splice(idx,1);}
   if(workMode)STATE.reminders_work=list;else STATE.reminders=list;
   save();renderReminders();if(currentTab==="home")renderHome();
-}
-
-function processMidnightReminders(){
-  var changed=false;
-  var lists=[STATE.reminders,STATE.reminders_work||[]];
-  lists.forEach(function(list,wi){
-    var keep=[];
-    list.forEach(function(r){
-      if(r.completed&&r.completedDate&&r.completedDate<today()){
-        // Move to completed log
-        var done=Object.assign({},r,{completed:true});
-        if(wi===0){if(!STATE.completedReminders)STATE.completedReminders=[];STATE.completedReminders.push(done);}
-        else{if(!STATE.completedReminders_work)STATE.completedReminders_work=[];STATE.completedReminders_work.push(done);}
-        // If repeating, add fresh copy with next date
-        if(r.repeat&&r.repeat!=="none"){
-          var next=Object.assign({},r,{id:uid(),completed:false,completedDate:null});
-          var d=new Date(r.date+"T12:00:00");
-          if(r.repeat==="daily")d.setDate(d.getDate()+1);
-          else if(r.repeat==="weekly")d.setDate(d.getDate()+7);
-          else if(r.repeat==="monthly")d.setMonth(d.getMonth()+1);
-          else if(r.repeat==="yearly")d.setFullYear(d.getFullYear()+1);
-          else if(r.repeat==="custom"){
-            if(r.customType==="every"&&r.repeatEvery){
-              d.setDate(d.getDate()+(+r.repeatEvery));
-            } else if(r.customType==="days"&&r.repeatDays&&r.repeatDays.length){
-              // Find next day of week
-              var currentDay=d.getDay();
-              var sortedDays=r.repeatDays.slice().sort(function(a,b){return a-b;});
-              var nextDay=sortedDays.find(function(day){return day>currentDay;});
-              if(nextDay===undefined)nextDay=sortedDays[0];
-              var daysAhead=nextDay>currentDay?nextDay-currentDay:7-(currentDay-nextDay);
-              d.setDate(d.getDate()+daysAhead);
-            } else {
-              d.setDate(d.getDate()+7); // fallback
-            }
-          }
-          next.date=d.toISOString().split("T")[0];
-          keep.push(next);
-        }
-        // Non-repeating just disappears to completed log
-        changed=true;
-      } else {
-        keep.push(r);
-      }
-    });
-    if(wi===0)STATE.reminders=keep;
-    else STATE.reminders_work=keep;
-  });
-  if(changed){save();if(currentUser)renderCurrentTab();}
 }
 function deleteCompletedReminder(id){STATE.completedReminders=(STATE.completedReminders||[]).filter(function(r){return r.id!==id;});STATE.completedReminders_work=(STATE.completedReminders_work||[]).filter(function(r){return r.id!==id;});save();renderReminders();}
 
@@ -1496,15 +1370,12 @@ function openReminderModal(id){
   var html="<div><div style='font-size:12px;font-weight:500;color:#6b7280;margin-bottom:4px'>Title</div><input id='rem-title' value='"+(r?r.title.replace(/'/g,"&#39;"):"")+"\' placeholder='Reminder'></div>"
     +"<div><div style='font-size:12px;font-weight:500;color:#6b7280;margin-bottom:4px'>Date</div><input type='date' id='rem-date' value='"+(r?r.date:today())+"'></div>"
     +"<div><div style='font-size:12px;font-weight:500;color:#6b7280;margin-bottom:6px'>Time <span style='font-size:11px;color:#9ca3af'>(tap to set)</span></div>"+makeTimeField("rem",defH,defM,defAP)+"</div>"
-    +"<div><div style='font-size:12px;font-weight:500;color:#6b7280;margin-bottom:4px'>Repeat</div><select id='rem-repeat' style='width:100%'>"+repOpts+repOpts+"</select></div>"
+    +"<div><div style='font-size:12px;font-weight:500;color:#6b7280;margin-bottom:4px'>Repeat</div><select id='rem-repeat' style='width:100%'>"+repOpts+"</select></div>"
     +custHtml
     +"<div><div style='font-size:12px;font-weight:500;color:#6b7280;margin-bottom:6px'>Notifications</div><div id='rem-notif-rows'></div></div>"
     +(isPartner?"<div style='display:flex;align-items:center;gap:10px'><label class='toggle-wrap'><input type='checkbox' id='rem-share' "+(r&&r.sharedWithPartner?"checked":"")+" ><span class='toggle-slider'></span></label><span style='font-size:13px'>Share with "+partnerName+"</span></div>":"")
     +"<div style='display:flex;gap:8px;margin-top:4px'><button class='btn btn-primary' style='flex:1' onclick='saveReminder()'>Save</button>"+(r?"<button class='btn btn-danger' onclick=\"deleteReminder('"+r.id+"')\">Delete</button>":"")+"<button class='btn btn-secondary' onclick=\"closeModal('reminder-modal')\">Cancel</button></div>";
   document.getElementById("reminder-form").innerHTML=html;
-  // Wire up custom repeat toggle
-  var remRepSel=document.getElementById("rem-repeat");
-  if(remRepSel)remRepSel.onchange=function(){toggleRemCustomRepeat();};
   renderNotifRows("rem-notif-rows",remNotifList,"rem");
   document.getElementById("reminder-modal").classList.add("open");
 }
@@ -1537,6 +1408,34 @@ function saveReminder(){
 function deleteReminder(id){confirmAction("Delete this reminder?",function(){STATE.reminders=STATE.reminders.filter(function(x){return x.id!==id;});STATE.reminders_work=(STATE.reminders_work||[]).filter(function(x){return x.id!==id;});save();closeModal("reminder-modal");renderReminders();});}
 
 // ── NOTIFICATIONS ────────────────────────────────────────────────────────
+function enableNotif(){
+  if(typeof Notification!=="undefined"){
+    Notification.requestPermission().then(function(p){
+      if(p==="granted"){STATE.notifEnabled=true;save();alert("Notifications enabled! You will receive pop-up alerts.");renderCurrentTab();}
+      else alert("To get notifications on iPhone/iPad:\n1. Open this page in Safari\n2. Tap Share\n3. Tap Add to Home Screen\n4. Open the app from your home screen\n5. Allow notifications when prompted");
+    });
+  } else alert("For notifications on iPhone/iPad:\n1. Open in Safari\n2. Tap Share > Add to Home Screen\n3. Open from home screen");
+}
+setInterval(function(){
+  if(!STATE.notifEnabled||typeof Notification==="undefined"||Notification.permission!=="granted")return;
+  var now=new Date(),nowMs=now.getTime();
+  var all=[].concat(STATE.events||[]).concat(STATE.reminders||[]);
+  all.forEach(function(item){
+    var notifs=item.notifications||[];if(item.notification)notifs=[item.notification];
+    notifs.forEach(function(mb){
+      if(!item.date)return;
+      var h=item.startH||item.h||12,m=item.startM||item.m||0,ap=item.startAP||item.ampm||"AM";
+      var hh=+h;if(ap==="PM"&&hh!==12)hh+=12;if(ap==="AM"&&hh===12)hh=0;
+      var itemMs=new Date(item.date+"T"+String(hh).padStart(2,"0")+":"+String(+m).padStart(2,"0")+":00").getTime();
+      var notifMs=itemMs-(mb*60000);
+      var key="n_"+item.id+"_"+mb;
+      if(nowMs>=notifMs&&nowMs<notifMs+60000&&!sessionStorage.getItem(key)){
+        new Notification("Family Hub",{body:(mb===0?"Now: ":(mb+" min: "))+item.title});
+        sessionStorage.setItem(key,"1");
+      }
+    });
+  });
+},60000);
 
 function confirmAction(msg,onConfirm){var el=document.getElementById("generic-modal-content");el.innerHTML="";var t=document.createElement("div");t.style.cssText="font-size:16px;font-weight:600;margin-bottom:16px;text-align:center";t.textContent=msg;var row=document.createElement("div");row.style.cssText="display:flex;gap:10px";var yes=document.createElement("button");yes.className="btn btn-danger";yes.style.flex="1";yes.textContent="Delete";yes.onclick=function(){closeModal("generic-modal");onConfirm();};var no=document.createElement("button");no.className="btn btn-secondary";no.style.flex="1";no.textContent="Cancel";no.onclick=function(){closeModal("generic-modal");};row.appendChild(yes);row.appendChild(no);el.appendChild(t);el.appendChild(row);document.getElementById("generic-modal").classList.add("open");}
 function showInfoModal(title,msg){var el=document.getElementById("generic-modal-content");el.innerHTML="";var t=document.createElement("div");t.style.cssText="font-weight:700;font-size:17px;margin-bottom:12px";t.textContent=title;var m=document.createElement("div");m.style.cssText="font-size:14px;color:#374151;margin-bottom:16px;line-height:1.5";m.textContent=msg;var btn=document.createElement("button");btn.className="btn btn-primary";btn.style.width="100%";btn.textContent="OK";btn.onclick=function(){closeModal("generic-modal");};el.appendChild(t);el.appendChild(m);el.appendChild(btn);document.getElementById("generic-modal").classList.add("open");}
@@ -1556,10 +1455,19 @@ function checkNotifications(){
       var key="n_"+item.id+"_"+mb+"_"+item.date;
       if(nowMs>=notifMs&&nowMs<notifMs+120000&&!sessionStorage.getItem(key)){
         var body=mb===0?"Now: "+item.title:mb<60?mb+" min: "+item.title:mb===60?"1 hour: "+item.title:"Tomorrow: "+item.title;
-        // In-app notification only - Cloudflare Worker handles locked screen via FCM
+        // Send via ntfy for locked screen notifications
+        try{
+          var nx=new XMLHttpRequest();
+          nx.open("POST","https://ntfy.sh/ZarzFamilyZone",true);
+          nx.setRequestHeader("Title","Family Hub");
+          nx.setRequestHeader("Priority","high");
+          nx.setRequestHeader("Tags","bell");
+          nx.send(body);
+        }catch(e){}
+        // Also try direct notification as fallback
         try{
           if(typeof Notification!=="undefined"&&Notification.permission==="granted"){
-            new Notification("Family Hub",{body:body,tag:key});
+            var n=new Notification("Family Hub",{body:body,tag:key});
           }
         }catch(e){}
         sessionStorage.setItem(key,"1");
@@ -1567,29 +1475,33 @@ function checkNotifications(){
     });
   });
 }
-// In-app notifications disabled - Cloudflare Worker handles via FCM
-// // setInterval(checkNotifications,30000); // Disabled - FCM Worker handles notifications
-// setTimeout(checkNotifications,5000);
+// setInterval(checkNotifications,30000); // Cloudflare Worker handles notifications
+setTimeout(checkNotifications,5000);
 
-
+function enableNotif(){
+  if(typeof Notification==="undefined"){showNotifGuide();return;}
+  if(Notification.permission==="granted"){STATE.notifEnabled=true;save();renderCurrentTab();try{new Notification("Family Hub",{body:"Notifications are on!"});}catch(e){}return;}
+  if(Notification.permission==="denied"){showInfoModal("Notifications blocked","Go to Settings and allow notifications for this site, then tap Enable again.");return;}
+  Notification.requestPermission().then(function(p){if(p==="granted"){STATE.notifEnabled=true;save();renderCurrentTab();try{new Notification("Family Hub",{body:"Notifications are on! You will get alerts for events and reminders.",requireInteraction:false});}catch(e){}checkNotifications();}else{showNotifGuide();}}).catch(function(){showNotifGuide();});
+}
+function showNotifGuide(){
+  var el=document.getElementById("generic-modal-content");el.innerHTML="";
+  var t=document.createElement("div");t.style.cssText="font-weight:700;font-size:17px;margin-bottom:4px";t.textContent="Enable Notifications on iPhone";
+  var sub=document.createElement("div");sub.style.cssText="font-size:13px;color:#6b7280;margin-bottom:16px";sub.textContent="Follow these steps:";
+  var steps=["Open this page in Safari (not Chrome)","Tap the Share button at the bottom","Tap Add to Home Screen","Tap Add in the top right","Open Family Hub from your Home Screen","Tap Enable and allow when prompted"];
+  var stepsEl=document.createElement("div");stepsEl.style.cssText="display:flex;flex-direction:column;gap:8px;margin-bottom:16px";
+  steps.forEach(function(s,i){var row=document.createElement("div");row.style.cssText="display:flex;align-items:flex-start;gap:10px";var num=document.createElement("div");num.style.cssText="width:24px;height:24px;border-radius:50%;background:#6366f1;color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex-shrink:0";num.textContent=i+1;var txt=document.createElement("div");txt.style.cssText="font-size:13px;color:#374151;padding-top:3px;line-height:1.4";txt.textContent=s;row.appendChild(num);row.appendChild(txt);stepsEl.appendChild(row);});
+  var btn=document.createElement("button");btn.className="btn btn-primary";btn.style.width="100%";btn.textContent="Got it";btn.onclick=function(){closeModal("generic-modal");};
+  el.appendChild(t);el.appendChild(sub);el.appendChild(stepsEl);el.appendChild(btn);document.getElementById("generic-modal").classList.add("open");
+}
+function openGeneric(html){document.getElementById("generic-modal-content").innerHTML=html;document.getElementById("generic-modal").classList.add("open");}
 function testFCM(){
   var el=document.getElementById("generic-modal-content");el.innerHTML="";
   var t=document.createElement("div");t.style.cssText="font-weight:700;font-size:17px;margin-bottom:12px";t.textContent="FCM Diagnostics";
   var info=document.createElement("div");info.style.cssText="font-size:13px;color:#374151;margin-bottom:16px;line-height:2";
-  info.innerHTML="firebase: <b>"+(typeof firebase!=="undefined"?"OK":"MISSING")+"</b><br>"
-    +"fcmMessaging: <b>"+(fcmMessaging?"OK":"NULL")+"</b><br>"
-    +"serviceWorker: <b>"+("serviceWorker" in navigator?"OK":"NOT SUPPORTED")+"</b><br>"
-    +"Notification: <b>"+(typeof Notification!=="undefined"?Notification.permission:"NOT SUPPORTED")+"</b><br>"
-    +"FB_URL: <b>"+(FB_URL?"OK":"NOT SET")+"</b><br>"
-    +"Saved token: <b>"+(localStorage.getItem("fhub_fcm")?"YES - "+localStorage.getItem("fhub_fcm").slice(0,15)+"...":"NO")+"</b>";
+  info.innerHTML="firebase: <b>"+(typeof firebase!=="undefined"?"OK":"MISSING")+"</b><br>fcmMessaging: <b>"+(fcmMessaging?"OK":"NULL")+"</b><br>serviceWorker: <b>"+("serviceWorker" in navigator?"OK":"NOT SUPPORTED")+"</b><br>Notification: <b>"+(typeof Notification!=="undefined"?Notification.permission:"NOT SUPPORTED")+"</b><br>FB_URL: <b>"+(FB_URL?"OK":"NOT SET")+"</b><br>Saved token: <b>"+(localStorage.getItem("fhub_fcm")?"YES":"NO")+"</b>";
   var regBtn=document.createElement("button");regBtn.className="btn btn-primary";regBtn.style.width="100%";regBtn.style.marginBottom="8px";regBtn.textContent="Register for locked screen notifications";
-  regBtn.onclick=function(){
-    closeModal("generic-modal");
-    registerFCMToken().then(function(token){
-      if(token){showInfoModal("Success!","Token saved: "+token.slice(0,20)+"...");}
-      else{showInfoModal("Failed","No token returned - check console for details.");}
-    });
-  };
+  regBtn.onclick=function(){closeModal("generic-modal");registerFCMToken().then(function(token){if(token){showInfoModal("Success!","Token saved: "+token.slice(0,20)+"...");}else{showInfoModal("Failed","No token returned");}});};
   var closeBtn=document.createElement("button");closeBtn.className="btn btn-secondary";closeBtn.style.width="100%";closeBtn.textContent="Close";closeBtn.onclick=function(){closeModal("generic-modal");};
   el.appendChild(t);el.appendChild(info);el.appendChild(regBtn);el.appendChild(closeBtn);
   document.getElementById("generic-modal").classList.add("open");
@@ -1607,22 +1519,10 @@ function enableNotif(){
     }else{showNotifGuide();}
   }).catch(function(){showNotifGuide();});
 }
-function showNotifGuide(){
-  var el=document.getElementById("generic-modal-content");el.innerHTML="";
-  var t=document.createElement("div");t.style.cssText="font-weight:700;font-size:17px;margin-bottom:4px";t.textContent="Enable Notifications on iPhone";
-  var sub=document.createElement("div");sub.style.cssText="font-size:13px;color:#6b7280;margin-bottom:16px";sub.textContent="Follow these steps:";
-  var steps=["Open this page in Safari (not Chrome)","Tap the Share button at the bottom","Tap Add to Home Screen","Tap Add in the top right","Open Family Hub from your Home Screen","Tap Enable and allow when prompted"];
-  var stepsEl=document.createElement("div");stepsEl.style.cssText="display:flex;flex-direction:column;gap:8px;margin-bottom:16px";
-  steps.forEach(function(s,i){var row=document.createElement("div");row.style.cssText="display:flex;align-items:flex-start;gap:10px";var num=document.createElement("div");num.style.cssText="width:24px;height:24px;border-radius:50%;background:#6366f1;color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex-shrink:0";num.textContent=i+1;var txt=document.createElement("div");txt.style.cssText="font-size:13px;color:#374151;padding-top:3px;line-height:1.4";txt.textContent=s;row.appendChild(num);row.appendChild(txt);stepsEl.appendChild(row);});
-  var btn=document.createElement("button");btn.className="btn btn-primary";btn.style.width="100%";btn.textContent="Got it";btn.onclick=function(){closeModal("generic-modal");};
-  el.appendChild(t);el.appendChild(sub);el.appendChild(stepsEl);el.appendChild(btn);document.getElementById("generic-modal").classList.add("open");
-}
-function openGeneric(html){document.getElementById("generic-modal-content").innerHTML=html;document.getElementById("generic-modal").classList.add("open");}
 function closeModal(id){document.getElementById(id).classList.remove("open");}
 
 try{var fu=localStorage.getItem("fhub_fburl");if(fu)FB_URL=fu;}catch(e){}
 
-// FCM Setup - init immediately, don't wait for load event
 var fcmApp=null,fcmMessaging=null;
 function initFCM(){
   try{
@@ -1637,20 +1537,16 @@ function initFCM(){
         messagingSenderId:"533379938918",
         appId:"1:533379938918:web:949fbd193d22ff5b074ba7"
       });
-    } else {
-      fcmApp=firebase.apps[0];
-    }
+    } else {fcmApp=firebase.apps[0];}
     fcmMessaging=firebase.messaging();
-  }catch(e){console.log("FCM init error:",e.message);}
+  }catch(e){console.log("FCM init:",e.message);}
 }
-window.addEventListener("load",function(){try{initFCM();}catch(e){console.log("FCM init skipped:",e.message);}});
+window.addEventListener("load",function(){try{initFCM();}catch(e){}});
+
 
 async function registerFCMToken(){
   try{
-    if(!fcmMessaging){
-      showInfoModal("FCM not ready","Firebase messaging not initialized. Make sure you are on the Home Screen app.");
-      return null;
-    }
+    if(!fcmMessaging){showInfoModal("FCM not ready","Firebase messaging not initialized.");return null;}
     var swReg=await navigator.serviceWorker.register("/firebase-messaging-sw.js");
     var token=await fcmMessaging.getToken({
       vapidKey:"BLuv5J3H0LpdaJ8VYgCVPCRqtsNK2ng1KIDuFMed4Zp8i0s5Gq36t7fHrOAsbQvjrIgLacpJjMvOKZwtqm_LtxQ",
@@ -1664,15 +1560,11 @@ async function registerFCMToken(){
       localStorage.setItem("fhub_fcm",token);
       return token;
     } else {
-      showInfoModal("Token failed","Got empty token from Firebase. Try removing and re-adding from Home Screen.");
+      showInfoModal("Token failed","Got empty token. Try removing and re-adding from Home Screen.");
       return null;
     }
-  }catch(e){
-    showInfoModal("FCM Error",e.message||"Unknown error registering for notifications.");
-    return null;
-  }
+  }catch(e){showInfoModal("FCM Error",e.message||"Unknown error");return null;}
 }
-
 
 if(fbConfigured()){fbPull(function(){startSync();});}
 initLogin();

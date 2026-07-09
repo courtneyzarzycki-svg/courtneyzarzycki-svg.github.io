@@ -321,7 +321,7 @@ var STATE={
   groceries:[],mealShopping:[],
   stores:STORES_DEFAULT.reduce(function(a,s){a[s]=[];return a;},{}),storeList:STORES_DEFAULT.slice(),
   events_work:[],reminders_work:[],completedReminders_work:[],
-  notifEnabled:false,mikeShareReminders:false,courtneyShareReminders:false,
+  notifEnabled:false,mikeShareReminders:false,courtneyShareReminders:false,movies:[],
   jobs:[]
 };
 var FB_URL="";
@@ -873,10 +873,10 @@ function openGiveReward(kid){
 function renderTasks(){
   var isAdmin=MEMBERS[currentUser]&&MEMBERS[currentUser].admin,isChild=MEMBERS[currentUser]&&MEMBERS[currentUser].child;
   document.getElementById("tasks-title").textContent=workMode?"Work Tasks":"Tasks & Chores";
-  var tabs=workMode?["todos","jobs"]:["chores","completed-chores","todos","rewards"];
+  var tabs=workMode?["todos","jobs"]:["chores","completed-chores","todos","rewards","movies"];
   if(tabs.indexOf(currentTaskSub)<0)currentTaskSub=tabs[0];
   var th=document.getElementById("tasks-tabs");th.innerHTML="";
-  var labels={"chores":"Chores","completed-chores":"Done","todos":"To-Do","rewards":"Rewards","jobs":"Jobs"};
+  var labels={"chores":"Chores","completed-chores":"Done","todos":"To-Do","rewards":"Rewards","jobs":"Jobs","movies":"Movies"};
   tabs.forEach(function(t){var d=document.createElement("div");d.className="sub-tab"+(currentTaskSub===t?" active":"");d.textContent=labels[t]||t;d.onclick=(function(tt,dd){return function(){switchTaskTab(tt,dd);};})(t,d);th.appendChild(d);});
   renderTaskContent();
 }
@@ -1064,6 +1064,44 @@ function clearCompletedChores(){
     save();renderTaskContent();
   });
 }
+  if(currentTaskSub==="movies"){
+    var c5=document.getElementById("tasks-content");c5.innerHTML="";
+    var movies=STATE.movies||[];
+    if(!movies.length){var none=document.createElement("div");none.style.cssText="text-align:center;color:#9ca3af;font-size:13px;padding:20px 0";none.textContent="No movies yet - tap + Add Movie";c5.appendChild(none);}
+    // Sort: unwatched first, then watched
+    movies.slice().sort(function(a,b){return (a.watched?1:0)-(b.watched?1:0);}).forEach(function(mv){
+      var card=document.createElement("div");card.className="card";card.style.cssText="display:flex;align-items:center;gap:12px;padding:12px 14px;margin-bottom:8px";
+      var info=document.createElement("div");info.style.flex="1";
+      var title=document.createElement("div");title.style.cssText="font-size:15px;font-weight:500;text-decoration:"+(mv.watched?"line-through":"none")+";color:"+(mv.watched?"#9ca3af":"#1a1a1a");title.textContent=mv.title;
+      var meta=document.createElement("div");meta.style.cssText="font-size:12px;color:#9ca3af;margin-top:2px";
+      meta.textContent=(mv.genre||"")+(mv.genre&&mv.addedBy?" · ":"")+(mv.addedBy&&MEMBERS[mv.addedBy]?MEMBERS[mv.addedBy].name:"");
+      info.appendChild(title);info.appendChild(meta);card.appendChild(info);
+      var watched=document.createElement("button");watched.style.cssText="background:none;border:none;cursor:pointer;font-size:20px;padding:2px 4px";
+      watched.innerHTML=mv.watched?"&#9989;":"&#11036;";
+      (function(mid){watched.onclick=function(){var i=(STATE.movies||[]).map(function(x){return x.id;}).indexOf(mid);if(i>=0)STATE.movies[i]=Object.assign({},STATE.movies[i],{watched:!STATE.movies[i].watched});save();renderTaskContent();};})(mv.id);
+      card.appendChild(watched);
+      var del=document.createElement("button");del.style.cssText="background:none;border:none;color:#ef4444;cursor:pointer;font-size:18px;padding:2px 4px";del.innerHTML="&#215;";
+      (function(mid){del.onclick=function(){confirmAction("Delete this movie?",function(){STATE.movies=(STATE.movies||[]).filter(function(x){return x.id!==mid;});save();renderTaskContent();});};})(mv.id);
+      card.appendChild(del);c5.appendChild(card);
+    });
+    var addMovieBtn=document.createElement("button");addMovieBtn.className="btn btn-primary";addMovieBtn.style.cssText="width:100%;margin-top:10px";addMovieBtn.textContent="+ Add Movie";
+    addMovieBtn.onclick=function(){
+      var el=document.getElementById("generic-modal-content");el.innerHTML="";
+      var t=document.createElement("div");t.style.cssText="font-weight:700;font-size:17px;margin-bottom:14px";t.textContent="Add Movie";
+      var form=document.createElement("div");form.style.cssText="display:flex;flex-direction:column;gap:12px";
+      var nl=document.createElement("div");nl.innerHTML="<div style='font-size:12px;font-weight:500;color:#6b7280;margin-bottom:4px'>Movie title</div><input id='mv-title' placeholder='e.g. Inception'>";form.appendChild(nl);
+      var gl=document.createElement("div");gl.innerHTML="<div style='font-size:12px;font-weight:500;color:#6b7280;margin-bottom:4px'>Genre (optional)</div><input id='mv-genre' placeholder='e.g. Action, Comedy'>";form.appendChild(gl);
+      var btnRow=document.createElement("div");btnRow.style.cssText="display:flex;gap:8px;margin-top:4px";
+      var sv=document.createElement("button");sv.className="btn btn-primary";sv.style.flex="1";sv.textContent="Add";
+      sv.onclick=function(){var t2=document.getElementById("mv-title").value.trim();if(!t2)return alert("Enter a movie title");var g=document.getElementById("mv-genre").value.trim();if(!STATE.movies)STATE.movies=[];STATE.movies.push({id:uid(),title:t2,genre:g,addedBy:currentUser,watched:false});save();closeModal("generic-modal");renderTaskContent();};
+      var cn=document.createElement("button");cn.className="btn btn-secondary";cn.textContent="Cancel";cn.onclick=function(){closeModal("generic-modal");};
+      btnRow.appendChild(sv);btnRow.appendChild(cn);form.appendChild(btnRow);
+      el.appendChild(t);el.appendChild(form);document.getElementById("generic-modal").classList.add("open");
+    };
+    c5.appendChild(addMovieBtn);
+    return;
+  }
+
 function deleteChore(id,mk){
   confirmAction("Delete this chore?",function(){
     STATE.chores[mk]=(STATE.chores[mk]||[]).filter(function(c){return c.id!==id;});

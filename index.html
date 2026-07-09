@@ -89,8 +89,8 @@ input:checked+.toggle-slider:before{transform:translateX(20px)}
 .notif-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
 .notif-row select{flex:1}
 </style>
-  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-messaging-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js" onerror="console.log('Firebase app SDK failed to load')"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-messaging-compat.js" onerror="console.log('Firebase messaging SDK failed to load')"></script>
 </head>
 <body>
 
@@ -1642,7 +1642,7 @@ function initFCM(){
     fcmMessaging=firebase.messaging();
   }catch(e){console.log("FCM init error:",e.message);}
 }
-initFCM();
+try{initFCM();}catch(e){console.log("FCM init skipped:",e.message);}
 
 async function registerFCMToken(){
   try{

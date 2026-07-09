@@ -322,7 +322,7 @@ var STATE={
   stores:STORES_DEFAULT.reduce(function(a,s){a[s]=[];return a;},{}),storeList:STORES_DEFAULT.slice(),
   events_work:[],reminders_work:[],completedReminders_work:[],
   notifEnabled:false,mikeShareReminders:false,courtneyShareReminders:false,
-  jobs:[]
+  jobs:[],movies:[]
 };
 var FB_URL="";
 function fbConfigured(){return FB_URL!=="";}
@@ -873,10 +873,10 @@ function openGiveReward(kid){
 function renderTasks(){
   var isAdmin=MEMBERS[currentUser]&&MEMBERS[currentUser].admin,isChild=MEMBERS[currentUser]&&MEMBERS[currentUser].child;
   document.getElementById("tasks-title").textContent=workMode?"Work Tasks":"Tasks & Chores";
-  var tabs=workMode?["todos","jobs"]:["chores","completed-chores","todos","rewards"];
+  var tabs=workMode?["todos","jobs"]:["chores","completed-chores","todos","rewards","movies"];
   if(tabs.indexOf(currentTaskSub)<0)currentTaskSub=tabs[0];
   var th=document.getElementById("tasks-tabs");th.innerHTML="";
-  var labels={"chores":"Chores","completed-chores":"Done","todos":"To-Do","rewards":"Rewards","jobs":"Jobs"};
+  var labels={"chores":"Chores","completed-chores":"Done","todos":"To-Do","rewards":"Rewards","jobs":"Jobs","movies":"Movies"};
   tabs.forEach(function(t){var d=document.createElement("div");d.className="sub-tab"+(currentTaskSub===t?" active":"");d.textContent=labels[t]||t;d.onclick=(function(tt,dd){return function(){switchTaskTab(tt,dd);};})(t,d);th.appendChild(d);});
   renderTaskContent();
 }
@@ -1064,6 +1064,7 @@ function clearCompletedChores(){
     save();renderTaskContent();
   });
 }
+  if(currentTaskSub==="movies"){document.getElementById("tasks-content").innerHTML="<div style='text-align:center;color:#9ca3af;padding:20px'>No movies yet - Add Movie coming soon</div>";return;}
 function deleteChore(id,mk){
   confirmAction("Delete this chore?",function(){
     STATE.chores[mk]=(STATE.chores[mk]||[]).filter(function(c){return c.id!==id;});

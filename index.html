@@ -89,8 +89,8 @@ input:checked+.toggle-slider:before{transform:translateX(20px)}
 .notif-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
 .notif-row select{flex:1}
 </style>
-  <script defer src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
-  <script defer src="https://www.gstatic.com/firebasejs/10.13.2/firebase-messaging-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-messaging-compat.js"></script>
 </head>
 <body>
 
@@ -1064,43 +1064,7 @@ function clearCompletedChores(){
     save();renderTaskContent();
   });
 }
-  if(currentTaskSub==="movies"){
-    var c5=document.getElementById("tasks-content");c5.innerHTML="";
-    var mvList=STATE.movies||[];
-    if(!mvList.length){var mn=document.createElement("div");mn.style.cssText="text-align:center;color:#9ca3af;font-size:13px;padding:20px 0";mn.textContent="No movies yet";c5.appendChild(mn);}
-    mvList.slice().sort(function(a,b){return (a.watched?1:0)-(b.watched?1:0);}).forEach(function(mv){
-      var card=document.createElement("div");card.className="card";card.style.cssText="display:flex;align-items:center;gap:12px;padding:12px 14px;margin-bottom:8px";
-      var info=document.createElement("div");info.style.flex="1";
-      var mvt=document.createElement("div");mvt.style.cssText="font-size:15px;font-weight:500;text-decoration:"+(mv.watched?"line-through":"none")+";color:"+(mv.watched?"#9ca3af":"#1a1a1a");mvt.textContent=mv.title;
-      var mvm=document.createElement("div");mvm.style.cssText="font-size:12px;color:#9ca3af;margin-top:2px";
-      mvm.textContent=(mv.genre||"")+(mv.genre&&mv.addedBy?" · ":"")+(mv.addedBy&&MEMBERS[mv.addedBy]?MEMBERS[mv.addedBy].name:"");
-      info.appendChild(mvt);info.appendChild(mvm);card.appendChild(info);
-      var wb=document.createElement("button");wb.style.cssText="background:none;border:none;cursor:pointer;font-size:20px;padding:2px 4px";
-      wb.innerHTML=mv.watched?"&#9989;":"&#11036;";
-      (function(mid){wb.onclick=function(){var i=(STATE.movies||[]).map(function(x){return x.id;}).indexOf(mid);if(i>=0)STATE.movies[i]=Object.assign({},STATE.movies[i],{watched:!STATE.movies[i].watched});save();renderTaskContent();};})(mv.id);
-      card.appendChild(wb);
-      var db=document.createElement("button");db.style.cssText="background:none;border:none;color:#ef4444;cursor:pointer;font-size:18px;padding:2px 4px";db.innerHTML="&#215;";
-      (function(mid){db.onclick=function(){confirmAction("Delete this movie?",function(){STATE.movies=(STATE.movies||[]).filter(function(x){return x.id!==mid;});save();renderTaskContent();});};})(mv.id);
-      card.appendChild(db);c5.appendChild(card);
-    });
-    var amb=document.createElement("button");amb.className="btn btn-primary";amb.style.cssText="width:100%;margin-top:10px";amb.textContent="+ Add Movie";
-    amb.onclick=function(){
-      var el=document.getElementById("generic-modal-content");el.innerHTML="";
-      var mt=document.createElement("div");mt.style.cssText="font-weight:700;font-size:17px;margin-bottom:14px";mt.textContent="Add Movie";
-      var mf=document.createElement("div");mf.style.cssText="display:flex;flex-direction:column;gap:12px";
-      var nl=document.createElement("div");nl.innerHTML="<div style='font-size:12px;font-weight:500;color:#6b7280;margin-bottom:4px'>Movie title</div><input id='mv-title' placeholder='e.g. Inception'>";mf.appendChild(nl);
-      var gl=document.createElement("div");gl.innerHTML="<div style='font-size:12px;font-weight:500;color:#6b7280;margin-bottom:4px'>Genre (optional)</div><input id='mv-genre' placeholder='e.g. Action, Comedy'>";mf.appendChild(gl);
-      var br2=document.createElement("div");br2.style.cssText="display:flex;gap:8px;margin-top:4px";
-      var sv=document.createElement("button");sv.className="btn btn-primary";sv.style.flex="1";sv.textContent="Add";
-      sv.onclick=function(){var t2=document.getElementById("mv-title").value.trim();if(!t2)return alert("Enter a title");var g=document.getElementById("mv-genre").value.trim();if(!STATE.movies)STATE.movies=[];STATE.movies.push({id:uid(),title:t2,genre:g,addedBy:currentUser,watched:false});save();closeModal("generic-modal");renderTaskContent();};
-      var cn=document.createElement("button");cn.className="btn btn-secondary";cn.textContent="Cancel";cn.onclick=function(){closeModal("generic-modal");};
-      br2.appendChild(sv);br2.appendChild(cn);mf.appendChild(br2);
-      el.appendChild(mt);el.appendChild(mf);document.getElementById("generic-modal").classList.add("open");
-    };
-    c5.appendChild(amb);
-    return;
-  }
-
+  if(currentTaskSub==="movies"){var c=document.getElementById("tasks-content");c.innerHTML="<div class='card' style='text-align:center;color:#9ca3af;padding:20px'>No movies yet</div>";return;}
 function deleteChore(id,mk){
   confirmAction("Delete this chore?",function(){
     STATE.chores[mk]=(STATE.chores[mk]||[]).filter(function(c){return c.id!==id;});
@@ -1641,7 +1605,7 @@ function initFCM(){
     fcmMessaging=firebase.messaging();
   }catch(e){console.log("FCM init error:",e.message);}
 }
-window.addEventListener("load",function(){try{initFCM();}catch(e){console.log("FCM skipped");}});
+initFCM();
 
 async function registerFCMToken(){
   try{

@@ -1649,38 +1649,60 @@ function renderLists(){
   if(!STATE.myLists)STATE.myLists={mike:[],courtney:[],cruz:[],chael:[]};
   if(!STATE.myLists[currentUser])STATE.myLists[currentUser]=[];
   var userLists=STATE.myLists[currentUser];
-  var tabsEl=document.getElementById("list-tabs");tabsEl.innerHTML="";
+  document.getElementById("list-tabs").innerHTML="";
   var content=document.getElementById("list-content");content.innerHTML="";
+
   if(!userLists.length){
-    content.innerHTML="<div class='card' style='text-align:center;color:#9ca3af;font-size:13px;padding:20px'>No lists yet - tap + to create one</div>";
+    var empty=document.createElement("div");empty.className="card";empty.style.cssText="text-align:center;color:#9ca3af;font-size:13px;padding:20px";empty.textContent="No lists yet - tap + to create one";content.appendChild(empty);
     return;
   }
-  // Active list
-  if(!window.activeList||!userLists.find(function(l){return l.id===window.activeList;}))window.activeList=userLists[0].id;
-  // Tabs
-  userLists.forEach(function(lst){
-    var tab=document.createElement("div");tab.className="store-tab"+(lst.id===window.activeList?" active":"");
-    tab.textContent=lst.name;
-    (function(lid){tab.onclick=function(){window.activeList=lid;renderLists();};})(lst.id);
-    // Long press to delete
-    var pt;tab.addEventListener("touchstart",function(){pt=setTimeout(function(){confirmAction("Delete list?",function(){STATE.myLists[currentUser]=STATE.myLists[currentUser].filter(function(l){return l.id!==lid;});if(window.activeList===lid)window.activeList=null;save();renderLists();});},600);},{passive:true});
-    tab.addEventListener("touchend",function(){clearTimeout(pt);},{passive:true});
-    tabsEl.appendChild(tab);
-  });
-  // Active list items
-  var lst=userLists.find(function(l){return l.id===window.activeList;});
-  if(!lst)return;
-  var items=lst.items||[];
-  if(!items.length){content.innerHTML="<div class='card' style='text-align:center;color:#9ca3af;font-size:13px;padding:16px'>No items yet - tap + to add</div>";}
-  items.forEach(function(item,ii){
-    var row=document.createElement("div");row.className="check-item";
-    var chk=document.createElement("div");chk.className="checkbox"+(item.done?" checked":"");chk.innerHTML=item.done?"&#10003;":"";
-    var lid=window.activeList;
-    (function(iid){chk.onclick=function(){var l=STATE.myLists[currentUser].find(function(x){return x.id===lid;});if(l){var i=l.items.findIndex(function(x){return x.id===iid;});if(i>=0)l.items[i].done=!l.items[i].done;}save();renderLists();};})(item.id);
-    var txt=document.createElement("div");txt.style.cssText="flex:1;font-size:14px;text-decoration:"+(item.done?"line-through":"none")+";color:"+(item.done?"#9ca3af":"#1a1a1a");txt.textContent=item.text;
-    var del=document.createElement("button");del.style.cssText="background:none;border:none;color:#ef4444;cursor:pointer;font-size:18px;padding:0 4px";del.innerHTML="&#215;";
-    (function(iid){del.onclick=function(){var l=STATE.myLists[currentUser].find(function(x){return x.id===lid;});if(l)l.items=l.items.filter(function(x){return x.id!==iid;});save();renderLists();};})(item.id);
-    row.appendChild(chk);row.appendChild(txt);row.appendChild(del);content.appendChild(row);
+
+  userLists.forEach(function(lst,li){
+    var isOpen=window.activeList===lst.id;
+
+    // List row
+    var lrow=document.createElement("div");lrow.className="card";lrow.style.cssText="margin-bottom:10px;padding:0;overflow:hidden";
+
+    // Header - always visible
+    var lhdr=document.createElement("div");lhdr.style.cssText="display:flex;align-items:center;gap:10px;padding:14px 14px;cursor:pointer";
+    var arrow=document.createElement("span");arrow.style.cssText="font-size:12px;color:#9ca3af;transition:transform 0.2s";arrow.textContent=isOpen?"▼":"▶";
+    var lname=document.createElement("div");lname.style.cssText="flex:1;font-weight:600;font-size:15px";lname.textContent=lst.name;
+    var lcount=document.createElement("div");lcount.style.cssText="font-size:12px;color:#9ca3af";
+    var done=(lst.items||[]).filter(function(x){return x.done;}).length;
+    var total=(lst.items||[]).length;
+    lcount.textContent=total?done+"/"+total+" done":"empty";
+    lhdr.appendChild(arrow);lhdr.appendChild(lname);lhdr.appendChild(lcount);
+
+    // Toggle open/close
+    (function(lid){lhdr.onclick=function(){window.activeList=window.activeList===lid?null:lid;renderLists();};})(lst.id);
+    lrow.appendChild(lhdr);
+
+    // Items - only shown when open
+    if(isOpen){
+      var lbody=document.createElement("div");lbody.style.cssText="border-top:1px solid #f3f4f6;padding:8px 14px 14px";
+      var items=lst.items||[];
+      if(!items.length){
+        var emp=document.createElement("div");emp.style.cssText="font-size:13px;color:#9ca3af;padding:8px 0";emp.textContent="No items yet";lbody.appendChild(emp);
+      }
+      items.forEach(function(item,ii){
+        var irow=document.createElement("div");irow.style.cssText="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f9fafb";
+        var ichk=document.createElement("div");ichk.className="checkbox"+(item.done?" checked":"");ichk.innerHTML=item.done?"&#10003;":"";
+        var lid=lst.id;
+        (function(iid){ichk.onclick=function(){var l=STATE.myLists[currentUser].find(function(x){return x.id===lid;});if(l){var i=l.items.findIndex(function(x){return x.id===iid;});if(i>=0)l.items[i].done=!l.items[i].done;}save();renderLists();};})(item.id);
+        var itxt=document.createElement("div");itxt.style.cssText="flex:1;font-size:14px;text-decoration:"+(item.done?"line-through":"none")+";color:"+(item.done?"#9ca3af":"#1a1a1a");itxt.textContent=item.text;
+        var idel=document.createElement("button");idel.style.cssText="background:none;border:none;color:#ef4444;cursor:pointer;font-size:18px;padding:0 2px";idel.innerHTML="&#215;";
+        (function(iid){idel.onclick=function(){var l=STATE.myLists[currentUser].find(function(x){return x.id===lid;});if(l)l.items=l.items.filter(function(x){return x.id!==iid;});save();renderLists();};})(item.id);
+        irow.appendChild(ichk);irow.appendChild(itxt);irow.appendChild(idel);lbody.appendChild(irow);
+      });
+
+      // Add item + Delete list buttons
+      var aib=document.createElement("button");aib.className="btn btn-primary";aib.style.cssText="width:100%;margin-top:12px";aib.textContent="+ Add Item";aib.onclick=openAddListItem;lbody.appendChild(aib);
+      var dlb=document.createElement("button");dlb.className="btn btn-secondary";dlb.style.cssText="width:100%;margin-top:8px;color:#ef4444;border-color:#ef4444";dlb.textContent="Delete List";
+      (function(li2){dlb.onclick=function(){confirmAction("Delete this list?",function(){STATE.myLists[currentUser].splice(li2,1);window.activeList=null;save();renderLists();});};})(li);
+      lbody.appendChild(dlb);
+      lrow.appendChild(lbody);
+    }
+    content.appendChild(lrow);
   });
 }
 

@@ -322,7 +322,7 @@ var STATE={
   stores:STORES_DEFAULT.reduce(function(a,s){a[s]=[];return a;},{}),storeList:STORES_DEFAULT.slice(),
   events_work:[],reminders_work:[],completedReminders_work:[],
   notifEnabled:false,mikeShareReminders:false,courtneyShareReminders:false,
-  jobs:[]
+  jobs:[],myLists:{mike:[],courtney:[],cruz:[],chael:[]}
 };
 var FB_URL="";
 function fbConfigured(){return FB_URL!=="";}
@@ -873,10 +873,10 @@ function openGiveReward(kid){
 function renderTasks(){
   var isAdmin=MEMBERS[currentUser]&&MEMBERS[currentUser].admin,isChild=MEMBERS[currentUser]&&MEMBERS[currentUser].child;
   document.getElementById("tasks-title").textContent=workMode?"Work Tasks":"Tasks & Chores";
-  var tabs=workMode?["todos","jobs"]:["chores","completed-chores","todos","rewards"];
+  var tabs=workMode?["todos","jobs"]:["chores","completed-chores","todos","rewards","lists"];
   if(tabs.indexOf(currentTaskSub)<0)currentTaskSub=tabs[0];
   var th=document.getElementById("tasks-tabs");th.innerHTML="";
-  var labels={"chores":"Chores","completed-chores":"Done","todos":"To-Do","rewards":"Rewards","jobs":"Jobs"};
+  var labels={"chores":"Chores","completed-chores":"Done","todos":"To-Do","rewards":"Rewards","jobs":"Jobs","lists":"My Lists"};
   tabs.forEach(function(t){var d=document.createElement("div");d.className="sub-tab"+(currentTaskSub===t?" active":"");d.textContent=labels[t]||t;d.onclick=(function(tt,dd){return function(){switchTaskTab(tt,dd);};})(t,d);th.appendChild(d);});
   renderTaskContent();
 }
@@ -1064,6 +1064,83 @@ function clearCompletedChores(){
     save();renderTaskContent();
   });
 }
+  if(currentTaskSub==="lists"){
+    var lc=document.getElementById("tasks-content");lc.innerHTML="";
+    if(!STATE.myLists)STATE.myLists={mike:[],courtney:[],cruz:[],chael:[]};
+    if(!STATE.myLists[currentUser])STATE.myLists[currentUser]=[];
+    var userLists=STATE.myLists[currentUser];
+
+    if(!userLists.length){
+      var ln=document.createElement("div");ln.style.cssText="text-align:center;color:#9ca3af;font-size:13px;padding:20px 0";ln.textContent="No lists yet - tap + New List";lc.appendChild(ln);
+    }
+
+    userLists.forEach(function(lst,li){
+      // List card
+      var lcard=document.createElement("div");lcard.style.marginBottom="16px";
+
+      // List header
+      var lhdr=document.createElement("div");lhdr.style.cssText="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px";
+      var ltitle=document.createElement("div");ltitle.style.cssText="font-weight:700;font-size:16px;color:#1a1a1a";ltitle.textContent=lst.name;
+      var lbtns=document.createElement("div");lbtns.style.cssText="display:flex;gap:6px";
+
+      // Add item button
+      var ladd=document.createElement("button");ladd.style.cssText="background:#f0fdf4;border:1.5px solid #22c55e;border-radius:8px;padding:4px 10px;font-size:12px;color:#15803d;cursor:pointer;font-weight:500";ladd.textContent="+ Add";
+      (function(li2){ladd.onclick=function(){
+        var el=document.getElementById("generic-modal-content");el.innerHTML="";
+        var tt=document.createElement("div");tt.style.cssText="font-weight:700;font-size:17px;margin-bottom:12px";tt.textContent="Add Item";
+        var inp=document.createElement("input");inp.id="list-item-input";inp.placeholder="e.g. Inception, Visit Paris...";inp.style.width="100%";
+        var br=document.createElement("div");br.style.cssText="display:flex;gap:8px;margin-top:12px";
+        var sv=document.createElement("button");sv.className="btn btn-primary";sv.style.flex="1";sv.textContent="Add";
+        sv.onclick=function(){var v=document.getElementById("list-item-input").value.trim();if(!v)return;if(!STATE.myLists[currentUser][li2].items)STATE.myLists[currentUser][li2].items=[];STATE.myLists[currentUser][li2].items.push({id:uid(),text:v,done:false});save();closeModal("generic-modal");renderTaskContent();};
+        var cn=document.createElement("button");cn.className="btn btn-secondary";cn.textContent="Cancel";cn.onclick=function(){closeModal("generic-modal");};
+        br.appendChild(sv);br.appendChild(cn);el.appendChild(tt);el.appendChild(inp);el.appendChild(br);
+        document.getElementById("generic-modal").classList.add("open");
+        setTimeout(function(){var i=document.getElementById("list-item-input");if(i)i.focus();},100);
+      };})(li);
+
+      // Delete list button
+      var ldel=document.createElement("button");ldel.style.cssText="background:none;border:none;color:#ef4444;cursor:pointer;font-size:18px;padding:2px 4px";ldel.innerHTML="&#215;";
+      (function(li2){ldel.onclick=function(){confirmAction("Delete this list?",function(){STATE.myLists[currentUser].splice(li2,1);save();renderTaskContent();});};})(li);
+
+      lbtns.appendChild(ladd);lbtns.appendChild(ldel);
+      lhdr.appendChild(ltitle);lhdr.appendChild(lbtns);lcard.appendChild(lhdr);
+
+      // List items
+      var items=lst.items||[];
+      if(!items.length){
+        var emp=document.createElement("div");emp.style.cssText="font-size:13px;color:#9ca3af;padding:4px 0 8px 0";emp.textContent="No items yet";lcard.appendChild(emp);
+      }
+      items.forEach(function(item,ii){
+        var irow=document.createElement("div");irow.style.cssText="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f3f4f6";
+        var ichk=document.createElement("div");ichk.className="checkbox"+(item.done?" checked":"");ichk.innerHTML=item.done?"&#10003;":"";
+        (function(li2,ii2){ichk.onclick=function(){STATE.myLists[currentUser][li2].items[ii2].done=!STATE.myLists[currentUser][li2].items[ii2].done;save();renderTaskContent();};})(li,ii);
+        var itxt=document.createElement("div");itxt.style.cssText="flex:1;font-size:14px;text-decoration:"+(item.done?"line-through":"none")+";color:"+(item.done?"#9ca3af":"#1a1a1a");itxt.textContent=item.text;
+        var idel=document.createElement("button");idel.style.cssText="background:none;border:none;color:#ef4444;cursor:pointer;font-size:16px;padding:0 2px";idel.innerHTML="&#215;";
+        (function(li2,ii2){idel.onclick=function(){STATE.myLists[currentUser][li2].items.splice(ii2,1);save();renderTaskContent();};})(li,ii);
+        irow.appendChild(ichk);irow.appendChild(itxt);irow.appendChild(idel);lcard.appendChild(irow);
+      });
+
+      lc.appendChild(lcard);
+    });
+
+    // New list button
+    var nlbtn=document.createElement("button");nlbtn.className="btn btn-primary";nlbtn.style.cssText="width:100%;margin-top:8px";nlbtn.textContent="+ New List";
+    nlbtn.onclick=function(){
+      var el=document.getElementById("generic-modal-content");el.innerHTML="";
+      var tt=document.createElement("div");tt.style.cssText="font-weight:700;font-size:17px;margin-bottom:12px";tt.textContent="New List";
+      var inp=document.createElement("input");inp.id="list-name-input";inp.placeholder="e.g. Movies, Bucket List, Christmas Ideas";inp.style.width="100%";
+      var br=document.createElement("div");br.style.cssText="display:flex;gap:8px;margin-top:12px";
+      var sv=document.createElement("button");sv.className="btn btn-primary";sv.style.flex="1";sv.textContent="Create";
+      sv.onclick=function(){var v=document.getElementById("list-name-input").value.trim();if(!v)return;if(!STATE.myLists)STATE.myLists={mike:[],courtney:[],cruz:[],chael:[]};if(!STATE.myLists[currentUser])STATE.myLists[currentUser]=[];STATE.myLists[currentUser].push({id:uid(),name:v,items:[]});save();closeModal("generic-modal");renderTaskContent();};
+      var cn=document.createElement("button");cn.className="btn btn-secondary";cn.textContent="Cancel";cn.onclick=function(){closeModal("generic-modal");};
+      br.appendChild(sv);br.appendChild(cn);el.appendChild(tt);el.appendChild(inp);el.appendChild(br);
+      document.getElementById("generic-modal").classList.add("open");
+      setTimeout(function(){var i=document.getElementById("list-name-input");if(i)i.focus();},100);
+    };
+    lc.appendChild(nlbtn);
+    return;
+  }
+
 function deleteChore(id,mk){
   confirmAction("Delete this chore?",function(){
     STATE.chores[mk]=(STATE.chores[mk]||[]).filter(function(c){return c.id!==id;});

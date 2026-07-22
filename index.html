@@ -942,21 +942,32 @@ function renderTaskContent(){
     var vis=todos.filter(function(t){return (t.assigned||[]).indexOf(currentUser)>=0;}).slice().sort(function(a,b){
       if(!a.dueDate&&!b.dueDate)return 0;if(!a.dueDate)return 1;if(!b.dueDate)return -1;return a.dueDate>b.dueDate?1:-1;
     });
-    var html="";
+    var c3=document.getElementById("tasks-content");c3.innerHTML="";
+    if(!vis.length){var tn=document.createElement("div");tn.style.cssText="text-align:center;color:#9ca3af;font-size:13px;padding:20px 0";tn.textContent="No to-dos yet";c3.appendChild(tn);}
     vis.forEach(function(t){
-      var p="";
+      var row=document.createElement("div");row.className="check-item";
+      row.style.cssText="border-left:"+(t.jobId&&(STATE.jobs||[]).find(function(j){return j.id===t.jobId;})?"3px solid "+((STATE.jobs||[]).find(function(j){return j.id===t.jobId;})||{}).color:"3px solid transparent")+";padding-left:8px";
+      var chk=document.createElement("div");chk.className="checkbox"+(t.completed?" checked":"");chk.innerHTML=t.completed?"&#10003;":"";
+      (function(tid){chk.onclick=function(){toggleTodo(tid);};})(t.id);
+      var info=document.createElement("div");info.style.flex="1";
       var jobObj=workMode&&t.jobId?(STATE.jobs||[]).find(function(j){return j.id===t.jobId;}):null;
-      if(jobObj)p+="<span style='font-size:11px;font-weight:700;color:"+jobObj.color+"'>"+jobObj.name+"</span> ";
-      (t.assigned||[]).forEach(function(m){if(MEMBERS[m])p+="<span class='pill' style='background:"+MEMBERS[m].color+";color:white'>"+MEMBERS[m].name+"</span>";});
-      var dateStr=t.dueDate?"<span style='font-size:11px;color:#9ca3af;margin-left:4px'>Due "+fmtDate(t.dueDate)+"</span>":"";
-      html+="<div class='check-item' style='border-left:"+(jobObj?"3px solid "+jobObj.color:"3px solid transparent")+";padding-left:8px'>"
-        +"<div class='checkbox"+(t.completed?" checked":"")+"' onclick=\"toggleTodo('"+t.id+"')\">"+( t.completed?"&#10003;":"")+"</div>"
-        +"<div style='flex:1'><div style='font-size:14px;text-decoration:"+(t.completed?"line-through":"none")+"'>"+t.text+"</div>"
-        +"<div style='margin-top:2px'>"+p+dateStr+"</div></div>"
-        +"<button onclick=\"openEditTodo('"+t.id+"')\" style='background:none;border:none;cursor:pointer;font-size:16px;padding:0 4px'>&#9998;</button>"
-        +((isAdmin||(isChild&&t.completed))?"<button onclick=\"deleteTodo('"+t.id+"')\" style='background:none;border:none;color:#ef4444;cursor:pointer;font-size:18px;padding:0 4px'>&#215;</button>":"")
-        +"</div>";
+      var txt=document.createElement("div");txt.style.cssText="font-size:14px;text-decoration:"+(t.completed?"line-through":"none");txt.textContent=t.text;
+      var sub=document.createElement("div");sub.style.marginTop="2px";
+      if(jobObj){var jspan=document.createElement("span");jspan.style.cssText="font-size:11px;font-weight:700;color:"+jobObj.color;jspan.textContent=jobObj.name+" ";sub.appendChild(jspan);}
+      (t.assigned||[]).forEach(function(m){if(MEMBERS[m]){var p=document.createElement("span");p.className="pill";p.style.cssText="background:"+MEMBERS[m].color+";color:white";p.textContent=MEMBERS[m].name;sub.appendChild(p);}});
+      if(t.dueDate){var ds=document.createElement("span");ds.style.cssText="font-size:11px;color:#9ca3af;margin-left:4px";ds.textContent="Due "+fmtDate(t.dueDate);sub.appendChild(ds);}
+      info.appendChild(txt);info.appendChild(sub);
+      var editBtn=document.createElement("button");editBtn.style.cssText="background:none;border:none;cursor:pointer;font-size:16px;padding:0 4px";editBtn.innerHTML="&#9998;";
+      (function(tid){editBtn.onclick=function(){openEditTodo(tid);};})(t.id);
+      row.appendChild(chk);row.appendChild(info);row.appendChild(editBtn);
+      if(isAdmin||(isChild&&t.completed)){
+        var del=document.createElement("button");del.style.cssText="background:none;border:none;color:#ef4444;cursor:pointer;font-size:18px;padding:0 4px";del.innerHTML="&#215;";
+        (function(tid){del.onclick=function(){deleteTodo(tid);};})(t.id);
+        row.appendChild(del);
+      }
+      c3.appendChild(row);
     });
+    var addBtn=document.createElement("button");addBtn.className="btn btn-primary";addBtn.style.cssText="width:100%;margin-top:12px";addBtn.textContent="+ Add To-Do";addBtn.onclick=function(){openAddTodo();};c3.appendChild(addBtn);
   } else if(currentTaskSub==="rewards"){
     var c3=document.getElementById("tasks-content");c3.innerHTML="";
     ["cruz","chael"].forEach(function(kid){

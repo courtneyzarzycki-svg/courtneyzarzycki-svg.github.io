@@ -938,10 +938,25 @@ function renderTaskContent(){
     if(isAdmin&&cc.length){html+="<button class='btn btn-danger' style='width:100%;margin-top:12px' onclick='clearCompletedChores()'>Clear All Completed Chores</button>";}
     c.innerHTML=html;
   } else if(currentTaskSub==="todos"){
-    var todos=workMode?STATE.todos_work:STATE.todos,vis=todos.filter(function(t){return (t.assigned||[]).indexOf(currentUser)>=0;}),html="";
-    vis.forEach(function(t){var p="";(t.assigned||[]).forEach(function(m){if(MEMBERS[m])p+="<span class='pill' style='background:"+MEMBERS[m].color+";color:white'>"+MEMBERS[m].name+"</span>";});html+="<div class='check-item'><div class='checkbox"+(t.completed?" checked":"")+"' onclick=\"toggleTodo('"+t.id+"')\">"+(t.completed?"&#10003;":"")+"</div><div style='flex:1'><div style='font-size:14px;text-decoration:"+(t.completed?"line-through":"none")+"'>"+t.text+"</div><div style='margin-top:2px'>"+p+"</div></div>"+((isAdmin||(isChild&&t.completed))?"<button onclick=\"deleteTodo('"+t.id+"')\" style='background:none;border:none;color:#ef4444;cursor:pointer;font-size:18px;padding:0 4px'>&#215;</button>":"")+"</div>";});
-    html+="<button class='btn btn-secondary' style='width:100%;margin-top:12px' onclick='openAddTodo()'>+ Add To-Do</button>";
-    c.innerHTML=html;
+    var todos=workMode?STATE.todos_work:STATE.todos;
+    var vis=todos.filter(function(t){return (t.assigned||[]).indexOf(currentUser)>=0;}).slice().sort(function(a,b){
+      if(!a.dueDate&&!b.dueDate)return 0;if(!a.dueDate)return 1;if(!b.dueDate)return -1;return a.dueDate>b.dueDate?1:-1;
+    });
+    var html="";
+    vis.forEach(function(t){
+      var p="";
+      var jobObj=workMode&&t.jobId?(STATE.jobs||[]).find(function(j){return j.id===t.jobId;}):null;
+      if(jobObj)p+="<span style='font-size:11px;font-weight:700;color:"+jobObj.color+"'>"+jobObj.name+"</span> ";
+      (t.assigned||[]).forEach(function(m){if(MEMBERS[m])p+="<span class='pill' style='background:"+MEMBERS[m].color+";color:white'>"+MEMBERS[m].name+"</span>";});
+      var dateStr=t.dueDate?"<span style='font-size:11px;color:#9ca3af;margin-left:4px'>Due "+fmtDate(t.dueDate)+"</span>":"";
+      html+="<div class='check-item' style='border-left:"+(jobObj?"3px solid "+jobObj.color:"3px solid transparent")+";padding-left:8px'>"
+        +"<div class='checkbox"+(t.completed?" checked":"")+"' onclick=\"toggleTodo('"+t.id+"')\">"+( t.completed?"&#10003;":"")+"</div>"
+        +"<div style='flex:1'><div style='font-size:14px;text-decoration:"+(t.completed?"line-through":"none")+"'>"+t.text+"</div>"
+        +"<div style='margin-top:2px'>"+p+dateStr+"</div></div>"
+        +"<button onclick=\"openEditTodo('"+t.id+"')\" style='background:none;border:none;cursor:pointer;font-size:16px;padding:0 4px'>&#9998;</button>"
+        +((isAdmin||(isChild&&t.completed))?"<button onclick=\"deleteTodo('"+t.id+"')\" style='background:none;border:none;color:#ef4444;cursor:pointer;font-size:18px;padding:0 4px'>&#215;</button>":"")
+        +"</div>";
+    });
   } else if(currentTaskSub==="rewards"){
     var c3=document.getElementById("tasks-content");c3.innerHTML="";
     ["cruz","chael"].forEach(function(kid){
@@ -1748,7 +1763,56 @@ function openAddListItem(){
 }
 
 if(fbConfigured()){fbPull(function(){startSync();});}
-initLogin();
+initLogin();function openAddTodo(editId){
+  var editTodo=editId?(workMode?STATE.todos_work:STATE.todos).find(function(t){return t.id===editId;}):null;
+  todoMemSel=editTodo?editTodo.assigned.slice():[currentUser];
+  var el=document.getElementById("generic-modal-content");el.innerHTML="";
+  var title=document.createElement("div");title.style.cssText="font-weight:700;font-size:17px;margin-bottom:14px";title.textContent=editTodo?"Edit To-Do":"Add To-Do";el.appendChild(title);
+  var form=document.createElement("div");form.style.cssText="display:flex;flex-direction:column;gap:12px";
+  // Job selector (work mode only)
+  if(workMode&&(STATE.jobs||[]).length){
+    var jl=document.createElement("div");
+    var jlabel=document.createElement("div");jlabel.style.cssText="font-size:12px;font-weight:500;color:#6b7280;margin-bottom:4px";jlabel.textContent="Job";
+    var jsel=document.createElement("select");jsel.id="todo-job";jsel.style.width="100%";
+    var jopt=document.createElement("option");jopt.value="";jopt.textContent="No job";jsel.appendChild(jopt);
+    (STATE.jobs||[]).forEach(function(j){var o=document.createElement("option");o.value=j.id;o.textContent=j.name;o.style.color=j.color;if(editTodo&&editTodo.jobId===j.id)o.selected=true;jsel.appendChild(o);});
+    jl.appendChild(jlabel);jl.appendChild(jsel);form.appendChild(jl);
+  }
+  // Text field
+  var tl=document.createElement("div");
+  var tlabel=document.createElement("div");tlabel.style.cssText="font-size:12px;font-weight:500;color:#6b7280;margin-bottom:4px";tlabel.textContent="To-Do";
+  var tinp=document.createElement("input");tinp.id="todo-text";tinp.placeholder="What needs doing?";if(editTodo)tinp.value=editTodo.text;
+  tl.appendChild(tlabel);tl.appendChild(tinp);form.appendChild(tl);
+  // Due date
+  var dl=document.createElement("div");
+  var dlabel=document.createElement("div");dlabel.style.cssText="font-size:12px;font-weight:500;color:#6b7280;margin-bottom:4px";dlabel.textContent="Due date (optional)";
+  var dinp=document.createElement("input");dinp.type="date";dinp.id="todo-due";if(editTodo&&editTodo.dueDate)dinp.value=editTodo.dueDate;
+  dl.appendChild(dlabel);dl.appendChild(dinp);form.appendChild(dl);
+  // Members (family mode only)
+  if(!workMode){
+    var ml=document.createElement("div");
+    var mlabel=document.createElement("div");mlabel.style.cssText="font-size:12px;font-weight:500;color:#6b7280;margin-bottom:6px";mlabel.textContent="Assign to";
+    var mchips=document.createElement("div");mchips.style.cssText="display:flex;flex-wrap:wrap;gap:4px";
+    Object.keys(MEMBERS).forEach(function(k){
+      var s=todoMemSel.indexOf(k)>=0;
+      var chip=document.createElement("div");chip.className="member-chip";chip.id="tdomem-"+k;
+      chip.style.cssText="background:"+(s?MEMBERS[k].color:"white")+";color:"+(s?"white":"#374151")+";border-color:"+MEMBERS[k].color;
+      chip.textContent=MEMBERS[k].name;
+      (function(kk){chip.onclick=function(){toggleTodoMem(kk);};})(k);
+      mchips.appendChild(chip);
+    });
+    ml.appendChild(mlabel);ml.appendChild(mchips);form.appendChild(ml);
+  }
+  // Buttons
+  var br=document.createElement("div");br.style.cssText="display:flex;gap:8px";
+  var sv=document.createElement("button");sv.className="btn btn-primary";sv.style.flex="1";sv.textContent=editTodo?"Save":"Add";
+  (function(eid){sv.onclick=function(){saveTodo(eid);};})(editId||null);
+  var cn=document.createElement("button");cn.className="btn btn-secondary";cn.textContent="Cancel";cn.onclick=function(){closeModal("generic-modal");};
+  br.appendChild(sv);br.appendChild(cn);form.appendChild(br);
+  el.appendChild(form);
+  document.getElementById("generic-modal").classList.add("open");
+}
+function openEditTodo(id){openAddTodo(id);}
 </script>
 </body>
 </html>

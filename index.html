@@ -1043,9 +1043,11 @@ function renderTaskContent(){
       var card=document.createElement("div");card.className="card";card.style.cssText="display:flex;align-items:center;gap:12px;padding:12px 14px;margin-bottom:8px";
       var dot=document.createElement("div");dot.style.cssText="width:28px;height:28px;border-radius:50%;background:"+job.color+";flex-shrink:0";
       var name=document.createElement("div");name.style.cssText="flex:1;font-size:15px;font-weight:500";name.textContent=job.name;
+      var editJobBtn=document.createElement("button");editJobBtn.style.cssText="background:none;border:none;cursor:pointer;font-size:16px;padding:0 4px";editJobBtn.innerHTML="&#9998;";
+      (function(jid){editJobBtn.onclick=function(){openEditJob(jid);};})(job.id);
       var del=document.createElement("button");del.style.cssText="background:none;border:none;color:#ef4444;cursor:pointer;font-size:18px;padding:0 2px";del.innerHTML="&#215;";
       (function(jid){del.onclick=function(){confirmAction("Delete this job?",function(){STATE.jobs=(STATE.jobs||[]).filter(function(j){return j.id!==jid;});save();renderTaskContent();});};})(job.id);
-      card.appendChild(dot);card.appendChild(name);card.appendChild(del);c4.appendChild(card);
+      card.appendChild(dot);card.appendChild(name);card.appendChild(editJobBtn);card.appendChild(del);c4.appendChild(card);
     });
     // Add job button
     var addBtn=document.createElement("button");addBtn.className="btn btn-primary";addBtn.style.cssText="width:100%;margin-top:10px";addBtn.textContent="+ Add Job";
@@ -1208,7 +1210,20 @@ function saveChore(){var text=document.getElementById("ch-text").value.trim();if
 var todoMemSel=[];
 function openAddTodo(){todoMemSel=[currentUser];var mc=Object.keys(MEMBERS).map(function(k){var s=k===currentUser;return "<div class='member-chip' id='tdomem-"+k+"' style='background:"+(s?MEMBERS[k].color:"white")+";color:"+(s?"white":"#374151")+";border-color:"+MEMBERS[k].color+"' onclick=\"toggleTodoMem('"+k+"')\">"+MEMBERS[k].name+"</div>";}).join("");openGeneric("<div style='font-weight:700;font-size:17px;margin-bottom:14px'>Add To-Do</div><div style='display:flex;flex-direction:column;gap:12px'><div><div style='font-size:12px;font-weight:500;color:#6b7280;margin-bottom:4px'>To-Do</div><input id='todo-text' placeholder='What needs doing?'></div><div><div style='font-size:12px;font-weight:500;color:#6b7280;margin-bottom:6px'>Assign to</div><div style='display:flex;flex-wrap:wrap;gap:4px'>"+mc+"</div></div><div style='display:flex;gap:8px'><button class='btn btn-primary' style='flex:1' onclick='saveTodo()'>Add</button><button class='btn btn-secondary' onclick=\"closeModal('generic-modal')\">Cancel</button></div></div>");}
 function toggleTodoMem(k){var c=document.getElementById("tdomem-"+k),idx=todoMemSel.indexOf(k);if(idx>=0){todoMemSel.splice(idx,1);c.style.background="white";c.style.color="#374151";}else{todoMemSel.push(k);c.style.background=MEMBERS[k].color;c.style.color="white";}}
-function saveTodo(){var text=document.getElementById("todo-text").value.trim();if(!text)return alert("Enter a to-do");var item={id:uid(),text:text,assigned:todoMemSel.length?todoMemSel:[currentUser],completed:false};if(workMode)STATE.todos_work.push(item);else STATE.todos.push(item);save();closeModal("generic-modal");renderTaskContent();}
+function saveTodo(editId){
+  var text=document.getElementById("todo-text").value.trim();if(!text)return alert("Enter a to-do");
+  var jobSel=document.getElementById("todo-job");var jobId=jobSel?jobSel.value:"";
+  var dueDate=(document.getElementById("todo-due")||{}).value||"";
+  var list=workMode?STATE.todos_work:STATE.todos;
+  if(editId){
+    var i=list.map(function(t){return t.id;}).indexOf(editId);
+    if(i>=0)list[i]=Object.assign({},list[i],{text:text,dueDate:dueDate,jobId:jobId});
+  } else {
+    list.push({id:uid(),text:text,assigned:workMode?[currentUser]:todoMemSel.length?todoMemSel:[currentUser],completed:false,dueDate:dueDate,jobId:jobId});
+  }
+  if(workMode)STATE.todos_work=list;else STATE.todos=list;
+  save();closeModal("generic-modal");renderTaskContent();
+}
 
 // ── MEALS ────────────────────────────────────────────────────────────────
 var currentMealSub="plan";
@@ -1773,57 +1788,78 @@ function openAddListItem(){
   setTimeout(function(){var i=document.getElementById("new-list-item");if(i)i.focus();},100);
 }
 
-if(fbConfigured()){fbPull(function(){startSync();});}
-initLogin();function openAddTodo(editId){
+function openEditJob(jid){
+  var job=(STATE.jobs||[]).find(function(j){return j.id===jid;});
+  if(!job)return;
+  var JOB_COLORS=[["#1a1a1a","Black"],["#6b7280","Grey"],["#d1d5db","Light Grey"],["#7c2d12","Brown"],["#b91c1c","Maroon"],["#ef4444","Red"],["#f97316","Orange"],["#eab308","Yellow"],["#15803d","Dark Green"],["#4ade80","Light Green"],["#0e7490","Dark Teal"],["#22d3ee","Turquoise"],["#1d4ed8","Dark Blue"],["#93c5fd","Light Blue"],["#6d28d9","Dark Purple"],["#c084fc","Light Purple"],["#9f1239","Dark Pink"],["#fda4af","Light Pink"],["#78350f","Dark Brown"],["#ffffff","White"]];
+  var el=document.getElementById("generic-modal-content");el.innerHTML="";
+  var title=document.createElement("div");title.style.cssText="font-weight:700;font-size:17px;margin-bottom:14px";title.textContent="Edit Job";
+  var form=document.createElement("div");form.style.cssText="display:flex;flex-direction:column;gap:14px";
+  var nl=document.createElement("div");var nll=document.createElement("div");nll.style.cssText="font-size:12px;font-weight:500;color:#6b7280;margin-bottom:4px";nll.textContent="Job name";
+  var ninp=document.createElement("input");ninp.id="edit-job-name";ninp.value=job.name;nl.appendChild(nll);nl.appendChild(ninp);form.appendChild(nl);
+  var cl=document.createElement("div");var clL=document.createElement("div");clL.style.cssText="font-size:12px;font-weight:500;color:#6b7280;margin-bottom:8px";clL.textContent="Colour";
+  var clGrid=document.createElement("div");clGrid.style.cssText="display:grid;grid-template-columns:repeat(5,1fr);gap:10px";
+  cl.appendChild(clL);cl.appendChild(clGrid);form.appendChild(cl);
+  var selectedColor=job.color;
+  JOB_COLORS.forEach(function(col,i){
+    var colorVal=col[0],colorName=col[1];
+    var swatch=document.createElement("div");
+    swatch.style.cssText="width:100%;aspect-ratio:1;border-radius:50%;background:"+colorVal+";cursor:pointer;border:3px solid "+(colorVal===selectedColor?"#1a1a1a":"transparent")+(colorVal==="#ffffff"?";box-shadow:inset 0 0 0 1px #d1d5db":"");
+    swatch.id="eswatch-"+i;swatch.title=colorName;
+    (function(c,n,ii){swatch.onclick=function(){selectedColor=c;var lbl=document.getElementById("edit-job-color-lbl");if(lbl)lbl.textContent=n;JOB_COLORS.forEach(function(_,jj){var s=document.getElementById("eswatch-"+jj);if(s)s.style.borderColor=jj===ii?"#1a1a1a":"transparent";});};})(colorVal,colorName,i);
+    clGrid.appendChild(swatch);
+  });
+  var clLbl=document.createElement("div");clLbl.id="edit-job-color-lbl";clLbl.style.cssText="font-size:11px;color:#6b7280;margin-top:6px;text-align:center";clLbl.textContent=JOB_COLORS.find(function(c){return c[0]===job.color;})?JOB_COLORS.find(function(c){return c[0]===job.color;})[1]:"";cl.appendChild(clLbl);
+  var btnRow=document.createElement("div");btnRow.style.cssText="display:flex;gap:8px;margin-top:4px";
+  var sv=document.createElement("button");sv.className="btn btn-primary";sv.style.flex="1";sv.textContent="Save";
+  (function(jid2){sv.onclick=function(){
+    var n=document.getElementById("edit-job-name").value.trim();if(!n)return alert("Enter a job name");
+    var i=(STATE.jobs||[]).map(function(j){return j.id;}).indexOf(jid2);
+    if(i>=0)STATE.jobs[i]=Object.assign({},STATE.jobs[i],{name:n,color:selectedColor});
+    save();closeModal("generic-modal");renderTaskContent();
+  };})(jid);
+  var cn=document.createElement("button");cn.className="btn btn-secondary";cn.textContent="Cancel";cn.onclick=function(){closeModal("generic-modal");};
+  btnRow.appendChild(sv);btnRow.appendChild(cn);form.appendChild(btnRow);
+  el.appendChild(title);el.appendChild(form);
+  document.getElementById("generic-modal").classList.add("open");
+}
+
+function openAddTodo(editId){
   var editTodo=editId?(workMode?STATE.todos_work:STATE.todos).find(function(t){return t.id===editId;}):null;
   todoMemSel=editTodo?editTodo.assigned.slice():[currentUser];
   var el=document.getElementById("generic-modal-content");el.innerHTML="";
   var title=document.createElement("div");title.style.cssText="font-weight:700;font-size:17px;margin-bottom:14px";title.textContent=editTodo?"Edit To-Do":"Add To-Do";el.appendChild(title);
   var form=document.createElement("div");form.style.cssText="display:flex;flex-direction:column;gap:12px";
-  // Job selector (work mode only)
   if(workMode&&(STATE.jobs||[]).length){
-    var jl=document.createElement("div");
-    var jlabel=document.createElement("div");jlabel.style.cssText="font-size:12px;font-weight:500;color:#6b7280;margin-bottom:4px";jlabel.textContent="Job";
+    var jl=document.createElement("div");var jlabel=document.createElement("div");jlabel.style.cssText="font-size:12px;font-weight:500;color:#6b7280;margin-bottom:4px";jlabel.textContent="Job";
     var jsel=document.createElement("select");jsel.id="todo-job";jsel.style.width="100%";
     var jopt=document.createElement("option");jopt.value="";jopt.textContent="No job";jsel.appendChild(jopt);
     (STATE.jobs||[]).forEach(function(j){var o=document.createElement("option");o.value=j.id;o.textContent=j.name;o.style.color=j.color;if(editTodo&&editTodo.jobId===j.id)o.selected=true;jsel.appendChild(o);});
     jl.appendChild(jlabel);jl.appendChild(jsel);form.appendChild(jl);
   }
-  // Text field
-  var tl=document.createElement("div");
-  var tlabel=document.createElement("div");tlabel.style.cssText="font-size:12px;font-weight:500;color:#6b7280;margin-bottom:4px";tlabel.textContent="To-Do";
+  var tl=document.createElement("div");var tlabel=document.createElement("div");tlabel.style.cssText="font-size:12px;font-weight:500;color:#6b7280;margin-bottom:4px";tlabel.textContent="To-Do";
   var tinp=document.createElement("input");tinp.id="todo-text";tinp.placeholder="What needs doing?";if(editTodo)tinp.value=editTodo.text;
   tl.appendChild(tlabel);tl.appendChild(tinp);form.appendChild(tl);
-  // Due date
-  var dl=document.createElement("div");
-  var dlabel=document.createElement("div");dlabel.style.cssText="font-size:12px;font-weight:500;color:#6b7280;margin-bottom:4px";dlabel.textContent="Due date (optional)";
+  var dl=document.createElement("div");var dlabel=document.createElement("div");dlabel.style.cssText="font-size:12px;font-weight:500;color:#6b7280;margin-bottom:4px";dlabel.textContent="Due date (optional)";
   var dinp=document.createElement("input");dinp.type="date";dinp.id="todo-due";if(editTodo&&editTodo.dueDate)dinp.value=editTodo.dueDate;
   dl.appendChild(dlabel);dl.appendChild(dinp);form.appendChild(dl);
-  // Members (family mode only)
   if(!workMode){
-    var ml=document.createElement("div");
-    var mlabel=document.createElement("div");mlabel.style.cssText="font-size:12px;font-weight:500;color:#6b7280;margin-bottom:6px";mlabel.textContent="Assign to";
+    var ml=document.createElement("div");var mlabel=document.createElement("div");mlabel.style.cssText="font-size:12px;font-weight:500;color:#6b7280;margin-bottom:6px";mlabel.textContent="Assign to";
     var mchips=document.createElement("div");mchips.style.cssText="display:flex;flex-wrap:wrap;gap:4px";
-    Object.keys(MEMBERS).forEach(function(k){
-      var s=todoMemSel.indexOf(k)>=0;
-      var chip=document.createElement("div");chip.className="member-chip";chip.id="tdomem-"+k;
-      chip.style.cssText="background:"+(s?MEMBERS[k].color:"white")+";color:"+(s?"white":"#374151")+";border-color:"+MEMBERS[k].color;
-      chip.textContent=MEMBERS[k].name;
-      (function(kk){chip.onclick=function(){toggleTodoMem(kk);};})(k);
-      mchips.appendChild(chip);
-    });
+    Object.keys(MEMBERS).forEach(function(k){var s=todoMemSel.indexOf(k)>=0;var chip=document.createElement("div");chip.className="member-chip";chip.id="tdomem-"+k;chip.style.cssText="background:"+(s?MEMBERS[k].color:"white")+";color:"+(s?"white":"#374151")+";border-color:"+MEMBERS[k].color;chip.textContent=MEMBERS[k].name;(function(kk){chip.onclick=function(){toggleTodoMem(kk);};})(k);mchips.appendChild(chip);});
     ml.appendChild(mlabel);ml.appendChild(mchips);form.appendChild(ml);
   }
-  // Buttons
   var br=document.createElement("div");br.style.cssText="display:flex;gap:8px";
   var sv=document.createElement("button");sv.className="btn btn-primary";sv.style.flex="1";sv.textContent=editTodo?"Save":"Add";
-  (function(eid){sv.onclick=function(){saveTodo(eid);};})(editId||null);
+  (function(eid){sv.onclick=function(){saveTodo(eid);};})(editId);
   var cn=document.createElement("button");cn.className="btn btn-secondary";cn.textContent="Cancel";cn.onclick=function(){closeModal("generic-modal");};
-  br.appendChild(sv);br.appendChild(cn);form.appendChild(br);
-  el.appendChild(form);
+  br.appendChild(sv);br.appendChild(cn);form.appendChild(br);el.appendChild(form);
   document.getElementById("generic-modal").classList.add("open");
 }
 function openEditTodo(id){openAddTodo(id);}
+
+if(fbConfigured()){fbPull(function(){startSync();});}
+initLogin();
 </script>
 </body>
 </html>

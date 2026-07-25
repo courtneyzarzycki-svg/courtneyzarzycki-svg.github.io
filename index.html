@@ -367,7 +367,7 @@ function load(){try{var s=localStorage.getItem("fhub8");if(s){var d=JSON.parse(s
 load();
 
 var currentUser=null,workMode=false,calYear=new Date().getFullYear(),calMonth=new Date().getMonth(),calSel=today();
-var currentMealSub="plan",currentTaskSub="chores",currentActiveStore=STATE.storeList[0]||STORES_DEFAULT[0];
+var currentMealSub="plan",currentTaskSub="todos",currentActiveStore=STATE.storeList[0]||STORES_DEFAULT[0];
 var editingEventId=null,editingRemId=null,evMemSel=[],evRepeatDays=[],eventNotifList=[0],remNotifList=[0];
 
 // ── TIME DRUM PICKER ─────────────────────────────────────────────────────

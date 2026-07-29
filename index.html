@@ -942,75 +942,56 @@ function renderTaskContent(){
     var c3=document.getElementById("tasks-content");c3.innerHTML="";
 
     if(workMode){
-      // Group by job - accordion style like Lists
       var jobs=STATE.jobs||[];
-      var noJobTodos=todos.filter(function(t){return !t.jobId&&(t.assigned||[]).indexOf(currentUser)>=0;}).slice().sort(function(a,b){if(!a.dueDate&&!b.dueDate)return 0;if(!a.dueDate)return 1;if(!b.dueDate)return -1;return a.dueDate>b.dueDate?1:-1;});
-      if(!todos.filter(function(t){return (t.assigned||[]).indexOf(currentUser)>=0;}).length){
-        var tn=document.createElement("div");tn.style.cssText="text-align:center;color:#9ca3af;font-size:13px;padding:20px 0";tn.textContent="No to-dos yet";c3.appendChild(tn);
-      }
-      // Render job groups
+      var allVis=todos.filter(function(t){return (t.assigned||[]).indexOf(currentUser)>=0;});
+      if(!allVis.length){var tn=document.createElement("div");tn.style.cssText="text-align:center;color:#9ca3af;font-size:13px;padding:20px 0";tn.textContent="No to-dos yet";c3.appendChild(tn);}
+
+      // Render each job group - no accordion, always expanded
       jobs.forEach(function(job){
-        var jobTodos=todos.filter(function(t){return t.jobId===job.id&&(t.assigned||[]).indexOf(currentUser)>=0;}).slice().sort(function(a,b){if(!a.dueDate&&!b.dueDate)return 0;if(!a.dueDate)return 1;if(!b.dueDate)return -1;return a.dueDate>b.dueDate?1:-1;});
+        var jobTodos=todos.filter(function(t){return t.jobId===job.id&&(t.assigned||[]).indexOf(currentUser)>=0;});
         if(!jobTodos.length)return;
-        var isOpen=window.openJobGroup===job.id;
-        var grp=document.createElement("div");grp.style.marginBottom="10px";
-        var ghdr=document.createElement("div");ghdr.style.cssText="display:flex;align-items:center;gap:10px;padding:12px 14px;background:white;border-radius:12px;border:1.5px solid #e5e7eb;cursor:pointer;border-left:4px solid "+job.color;
-        var arrow=document.createElement("span");arrow.style.cssText="font-size:12px;color:#9ca3af";arrow.textContent=isOpen?"▼":"▶";
-        var jname=document.createElement("div");jname.style.cssText="flex:1;font-weight:700;font-size:15px;color:"+job.color;jname.textContent=job.name;
-        var jcount=document.createElement("div");jcount.style.cssText="font-size:12px;color:#9ca3af";jcount.textContent=jobTodos.length+" item"+(jobTodos.length!==1?"s":"");
-        ghdr.appendChild(arrow);ghdr.appendChild(jname);ghdr.appendChild(jcount);
-        (function(jid){ghdr.onclick=function(){window.openJobGroup=window.openJobGroup===jid?null:jid;renderTaskContent();};})(job.id);
-        grp.appendChild(ghdr);
-        if(isOpen){
-          var gbody=document.createElement("div");gbody.style.cssText="border:1.5px solid #e5e7eb;border-top:none;border-radius:0 0 12px 12px;padding:8px 14px 14px;background:white;border-left:4px solid "+job.color;
-          jobTodos.forEach(function(t){
-            var row=document.createElement("div");row.style.cssText="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f9fafb";
-            var chk=document.createElement("div");chk.className="checkbox"+(t.completed?" checked":"");chk.innerHTML=t.completed?"&#10003;":"";
-            (function(tid){chk.onclick=function(){toggleTodo(tid);};})(t.id);
-            var info=document.createElement("div");info.style.flex="1";
-            var txt=document.createElement("div");txt.style.cssText="font-size:14px;text-decoration:"+(t.completed?"line-through":"none");txt.textContent=t.text;
-            info.appendChild(txt);
-            if(t.dueDate){var ds=document.createElement("div");ds.style.cssText="font-size:11px;color:#9ca3af;margin-top:2px";ds.textContent="Due "+fmtDate(t.dueDate);info.appendChild(ds);}
-            var editBtn=document.createElement("button");editBtn.style.cssText="background:none;border:none;cursor:pointer;font-size:16px;padding:0 4px";editBtn.innerHTML="&#9998;";
-            (function(tid){editBtn.onclick=function(){openEditTodo(tid);};})(t.id);
-            var del=document.createElement("button");del.style.cssText="background:none;border:none;color:#ef4444;cursor:pointer;font-size:18px;padding:0 4px";del.innerHTML="&#215;";
-            (function(tid){del.onclick=function(){deleteTodo(tid);};})(t.id);
-            row.appendChild(chk);row.appendChild(info);row.appendChild(editBtn);row.appendChild(del);gbody.appendChild(row);
-          });
-          grp.appendChild(gbody);
-        }
-        c3.appendChild(grp);
+        // Job header
+        var ghdr=document.createElement("div");ghdr.style.cssText="display:flex;align-items:center;gap:8px;padding:8px 0 6px;margin-top:10px;border-bottom:2px solid "+job.color;
+        var jname=document.createElement("div");jname.style.cssText="font-weight:700;font-size:14px;color:"+job.color;jname.textContent=job.name;
+        ghdr.appendChild(jname);c3.appendChild(ghdr);
+        // Items in order entered (no sort)
+        jobTodos.forEach(function(t){
+          var row=document.createElement("div");row.style.cssText="display:flex;align-items:center;gap:10px;padding:8px 6px;border-bottom:1px solid #f9fafb;border-left:3px solid "+job.color+";padding-left:10px";
+          var chk=document.createElement("div");chk.className="checkbox"+(t.completed?" checked":"");chk.innerHTML=t.completed?"&#10003;":"";
+          (function(tid){chk.onclick=function(){toggleTodo(tid);};})(t.id);
+          var info=document.createElement("div");info.style.flex="1";
+          var txt=document.createElement("div");txt.style.cssText="font-size:14px;text-decoration:"+(t.completed?"line-through":"none");txt.textContent=t.text;
+          info.appendChild(txt);
+          var jlabel=document.createElement("div");jlabel.style.cssText="font-size:11px;font-weight:600;color:"+job.color+";margin-top:2px";jlabel.textContent=job.name;info.appendChild(jlabel);
+          if(t.dueDate){var ds=document.createElement("div");ds.style.cssText="font-size:11px;color:#9ca3af;margin-top:1px";ds.textContent="Due "+fmtDate(t.dueDate);info.appendChild(ds);}
+          var editBtn=document.createElement("button");editBtn.style.cssText="background:none;border:none;cursor:pointer;font-size:16px;padding:0 4px";editBtn.innerHTML="&#9998;";
+          (function(tid){editBtn.onclick=function(){openEditTodo(tid);};})(t.id);
+          var del=document.createElement("button");del.style.cssText="background:none;border:none;color:#ef4444;cursor:pointer;font-size:18px;padding:0 4px";del.innerHTML="&#215;";
+          (function(tid){del.onclick=function(){deleteTodo(tid);};})(t.id);
+          row.appendChild(chk);row.appendChild(info);row.appendChild(editBtn);row.appendChild(del);c3.appendChild(row);
+        });
       });
-      // No-job todos
+
+      // No-job todos at bottom
+      var noJobTodos=todos.filter(function(t){return !t.jobId&&(t.assigned||[]).indexOf(currentUser)>=0;});
       if(noJobTodos.length){
-        var isOpenNJ=window.openJobGroup==="nojob";
-        var njgrp=document.createElement("div");njgrp.style.marginBottom="10px";
-        var njhdr=document.createElement("div");njhdr.style.cssText="display:flex;align-items:center;gap:10px;padding:12px 14px;background:white;border-radius:12px;border:1.5px solid #e5e7eb;cursor:pointer";
-        var njarrow=document.createElement("span");njarrow.style.cssText="font-size:12px;color:#9ca3af";njarrow.textContent=isOpenNJ?"▼":"▶";
-        var njname=document.createElement("div");njname.style.cssText="flex:1;font-weight:700;font-size:15px;color:#6b7280";njname.textContent="No Job";
-        var njcount=document.createElement("div");njcount.style.cssText="font-size:12px;color:#9ca3af";njcount.textContent=noJobTodos.length+" item"+(noJobTodos.length!==1?"s":"");
-        njhdr.appendChild(njarrow);njhdr.appendChild(njname);njhdr.appendChild(njcount);
-        njhdr.onclick=function(){window.openJobGroup=window.openJobGroup==="nojob"?null:"nojob";renderTaskContent();};
-        njgrp.appendChild(njhdr);
-        if(isOpenNJ){
-          var njbody=document.createElement("div");njbody.style.cssText="border:1.5px solid #e5e7eb;border-top:none;border-radius:0 0 12px 12px;padding:8px 14px 14px;background:white";
-          noJobTodos.forEach(function(t){
-            var row=document.createElement("div");row.style.cssText="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f9fafb";
-            var chk=document.createElement("div");chk.className="checkbox"+(t.completed?" checked":"");chk.innerHTML=t.completed?"&#10003;":"";
-            (function(tid){chk.onclick=function(){toggleTodo(tid);};})(t.id);
-            var info=document.createElement("div");info.style.flex="1";
-            var txt=document.createElement("div");txt.style.cssText="font-size:14px;text-decoration:"+(t.completed?"line-through":"none");txt.textContent=t.text;
-            info.appendChild(txt);
-            if(t.dueDate){var ds=document.createElement("div");ds.style.cssText="font-size:11px;color:#9ca3af;margin-top:2px";ds.textContent="Due "+fmtDate(t.dueDate);info.appendChild(ds);}
-            var editBtn=document.createElement("button");editBtn.style.cssText="background:none;border:none;cursor:pointer;font-size:16px;padding:0 4px";editBtn.innerHTML="&#9998;";
-            (function(tid){editBtn.onclick=function(){openEditTodo(tid);};})(t.id);
-            var del=document.createElement("button");del.style.cssText="background:none;border:none;color:#ef4444;cursor:pointer;font-size:18px;padding:0 4px";del.innerHTML="&#215;";
-            (function(tid){del.onclick=function(){deleteTodo(tid);};})(t.id);
-            row.appendChild(chk);row.appendChild(info);row.appendChild(editBtn);row.appendChild(del);njbody.appendChild(row);
-          });
-          njgrp.appendChild(njbody);
-        }
-        c3.appendChild(njgrp);
+        var njhdr=document.createElement("div");njhdr.style.cssText="display:flex;align-items:center;gap:8px;padding:8px 0 6px;margin-top:10px;border-bottom:2px solid #9ca3af";
+        var njname=document.createElement("div");njname.style.cssText="font-weight:700;font-size:14px;color:#6b7280";njname.textContent="No Job";
+        njhdr.appendChild(njname);c3.appendChild(njhdr);
+        noJobTodos.forEach(function(t){
+          var row=document.createElement("div");row.style.cssText="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f9fafb";
+          var chk=document.createElement("div");chk.className="checkbox"+(t.completed?" checked":"");chk.innerHTML=t.completed?"&#10003;":"";
+          (function(tid){chk.onclick=function(){toggleTodo(tid);};})(t.id);
+          var info=document.createElement("div");info.style.flex="1";
+          var txt=document.createElement("div");txt.style.cssText="font-size:14px;text-decoration:"+(t.completed?"line-through":"none");txt.textContent=t.text;
+          info.appendChild(txt);
+          if(t.dueDate){var ds=document.createElement("div");ds.style.cssText="font-size:11px;color:#9ca3af;margin-top:2px";ds.textContent="Due "+fmtDate(t.dueDate);info.appendChild(ds);}
+          var editBtn=document.createElement("button");editBtn.style.cssText="background:none;border:none;cursor:pointer;font-size:16px;padding:0 4px";editBtn.innerHTML="&#9998;";
+          (function(tid){editBtn.onclick=function(){openEditTodo(tid);};})(t.id);
+          var del=document.createElement("button");del.style.cssText="background:none;border:none;color:#ef4444;cursor:pointer;font-size:18px;padding:0 4px";del.innerHTML="&#215;";
+          (function(tid){del.onclick=function(){deleteTodo(tid);};})(t.id);
+          row.appendChild(chk);row.appendChild(info);row.appendChild(editBtn);row.appendChild(del);c3.appendChild(row);
+        });
       }
     } else {
       // Family mode - flat list sorted by due date

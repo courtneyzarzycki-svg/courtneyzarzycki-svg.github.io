@@ -715,11 +715,11 @@ function renderCalendar(){
       var hols=getHolidays(ds),hasHol=hols.length>0,hasStat=hols.some(function(h){return h.stat;}),vac=isVacDay(ds);
       var devs=allEvs.filter(function(e){return eventOccursOn(e,ds);});
       var isToday2=ds===today(),isSel=ds===calSel;
+      var hasSharedFam=workMode&&famAllEvs.some(function(e){return e.showInWork&&eventOccursOn(e,ds);});
       var bg=isSel?"#eff6ff":vac?"#dbeafe":hasStat?"#fefce8":hasSharedFam?"#f3f4f6":"transparent";
       var dots="";if(hasHol)dots+="<div class='cal-dot' style='background:#ca8a04'></div>";
       devs.slice(0,3).forEach(function(e){dots+="<div class='cal-dot' style='background:"+getMC(e)+"'></div>";});
-      // Light gray bg in work calendar when shared family event exists
-      var hasSharedFam=workMode&&famAllEvs.some(function(e){return e.showInWork&&eventOccursOn(e,ds);});
+      // Light gray bg handled above
       var td=document.createElement("td");td.className="cal-cell";td.style.borderColor=isSel?"#6366f1":"transparent";
       td.innerHTML="<div class='cal-cell-inner' style='background:"+bg+"'><div class='cal-num' style='background:"+(isToday2?"#6366f1":"transparent")+";color:"+(isToday2?"white":hasHol?"#92400e":"#1a1a1a")+";font-weight:"+(isToday2||isSel?700:400)+"'>"+dd+"</div>"+(dots?"<div class='cal-dots'>"+dots+"</div>":"")+"</div>";
       td.onclick=function(){calSel=ds;renderCalendar();};tr_ref.appendChild(td);

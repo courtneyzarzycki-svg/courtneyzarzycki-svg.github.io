@@ -715,9 +715,11 @@ function renderCalendar(){
       var hols=getHolidays(ds),hasHol=hols.length>0,hasStat=hols.some(function(h){return h.stat;}),vac=isVacDay(ds);
       var devs=allEvs.filter(function(e){return eventOccursOn(e,ds);});
       var isToday2=ds===today(),isSel=ds===calSel;
-      var bg=isSel?"#eff6ff":vac?"#dbeafe":hasStat?"#fefce8":"transparent";
+      var bg=isSel?"#eff6ff":vac?"#dbeafe":hasStat?"#fefce8":hasSharedFam?"#f3f4f6":"transparent";
       var dots="";if(hasHol)dots+="<div class='cal-dot' style='background:#ca8a04'></div>";
       devs.slice(0,3).forEach(function(e){dots+="<div class='cal-dot' style='background:"+getMC(e)+"'></div>";});
+      // Light gray bg in work calendar when shared family event exists
+      var hasSharedFam=workMode&&famAllEvs.some(function(e){return e.showInWork&&eventOccursOn(e,ds);});
       var td=document.createElement("td");td.className="cal-cell";td.style.borderColor=isSel?"#6366f1":"transparent";
       td.innerHTML="<div class='cal-cell-inner' style='background:"+bg+"'><div class='cal-num' style='background:"+(isToday2?"#6366f1":"transparent")+";color:"+(isToday2?"white":hasHol?"#92400e":"#1a1a1a")+";font-weight:"+(isToday2||isSel?700:400)+"'>"+dd+"</div>"+(dots?"<div class='cal-dots'>"+dots+"</div>":"")+"</div>";
       td.onclick=function(){calSel=ds;renderCalendar();};tr_ref.appendChild(td);
@@ -1477,8 +1479,13 @@ function completeReminder(id){
   var list=workMode?(STATE.reminders_work||[]):STATE.reminders;
   var idx=list.map(function(r){return r.id;}).indexOf(id);if(idx<0)return;
   var r=list[idx];
-  // Mark as completed with today's date - stays visible with strikethrough until midnight
-  list[idx]=Object.assign({},r,{completed:true,completedDate:today()});
+  if(r.completed&&r.completedDate===today()){
+    // Already completed today - uncheck it
+    list[idx]=Object.assign({},r,{completed:false,completedDate:null});
+  } else {
+    // Mark as completed
+    list[idx]=Object.assign({},r,{completed:true,completedDate:today()});
+  }
   if(workMode)STATE.reminders_work=list;else STATE.reminders=list;
   save();renderReminders();if(currentTab==="home")renderHome();
 }
@@ -1504,15 +1511,28 @@ function processMidnightReminders(){
           else if(r.repeat==="yearly")d.setFullYear(d.getFullYear()+1);
           else if(r.repeat==="custom"){
             if(r.customType==="every"&&r.repeatEvery){
+              // Every N days
               d.setDate(d.getDate()+(+r.repeatEvery));
             } else if(r.customType==="days"&&r.repeatDays&&r.repeatDays.length){
-              // Find next day of week
+              // Specific days of week - find next occurrence
               var currentDay=d.getDay();
               var sortedDays=r.repeatDays.slice().sort(function(a,b){return a-b;});
               var nextDay=sortedDays.find(function(day){return day>currentDay;});
               if(nextDay===undefined)nextDay=sortedDays[0];
               var daysAhead=nextDay>currentDay?nextDay-currentDay:7-(currentDay-nextDay);
               d.setDate(d.getDate()+daysAhead);
+            } else if(r.customType==="nth"&&r.repeatNth&&r.repeatNthDay!==undefined){
+              // Nth weekday of month - e.g. "2nd Monday"
+              var nthMap={"1st":1,"2nd":2,"3rd":3,"4th":4,"5th":5};
+              var n=nthMap[r.repeatNth]||1;
+              var targetDay=+r.repeatNthDay;
+              // Move to next month
+              d.setMonth(d.getMonth()+1);
+              d.setDate(1);
+              // Find first occurrence of target day
+              var firstDow=d.getDay();
+              var daysToFirst=(targetDay-firstDow+7)%7;
+              d.setDate(1+daysToFirst+(n-1)*7);
             } else {
               d.setDate(d.getDate()+7); // fallback
             }

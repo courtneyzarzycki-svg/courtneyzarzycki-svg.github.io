@@ -605,8 +605,8 @@ function renderCurrentTab(){
 }
 function getVisibleReminders(){
   return STATE.reminders.filter(function(r){
-    if(r.owner===currentUser)return true;if(MEMBERS[currentUser]&&MEMBERS[currentUser].child)return false;
-    if((currentUser==="mike"||currentUser==="courtney")&&MEMBERS[r.owner]&&MEMBERS[r.owner].child)return true;
+    if(r.owner===currentUser)return true;
+    if(MEMBERS[currentUser]&&MEMBERS[currentUser].child)return false;
     if(currentUser==="mike"&&r.owner==="courtney")return STATE.courtneyShareReminders&&r.sharedWithPartner;
     if(currentUser==="courtney"&&r.owner==="mike")return STATE.mikeShareReminders&&r.sharedWithPartner;
     return false;

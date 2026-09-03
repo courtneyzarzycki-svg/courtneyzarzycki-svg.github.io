@@ -605,10 +605,14 @@ function renderCurrentTab(){
 }
 function getVisibleReminders(){
   return STATE.reminders.filter(function(r){
-    if(r.owner===currentUser)return true;
+    // If no owner set, treat as belonging to current user only
+    var owner=r.owner||currentUser;
+    if(owner===currentUser)return true;
     if(MEMBERS[currentUser]&&MEMBERS[currentUser].child)return false;
-    if(currentUser==="mike"&&r.owner==="courtney")return STATE.courtneyShareReminders&&r.sharedWithPartner;
-    if(currentUser==="courtney"&&r.owner==="mike")return STATE.mikeShareReminders&&r.sharedWithPartner;
+    // Admins only see partner reminders if shared
+    if(currentUser==="mike"&&owner==="courtney")return STATE.courtneyShareReminders&&r.sharedWithPartner;
+    if(currentUser==="courtney"&&owner==="mike")return STATE.mikeShareReminders&&r.sharedWithPartner;
+    // Admins never see kids reminders unless kid explicitly shares (future feature)
     return false;
   });
 }

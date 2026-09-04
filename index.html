@@ -612,7 +612,9 @@ function getVisibleReminders(){
     // Admins only see partner reminders if shared
     if(currentUser==="mike"&&owner==="courtney")return STATE.courtneyShareReminders&&r.sharedWithPartner;
     if(currentUser==="courtney"&&owner==="mike")return STATE.mikeShareReminders&&r.sharedWithPartner;
-    // Admins never see kids reminders unless kid explicitly shares (future feature)
+    // Show kids reminders if shared with this admin
+    if(currentUser==="mike"&&MEMBERS[owner]&&MEMBERS[owner].child)return r.shareWithMike===true;
+    if(currentUser==="courtney"&&MEMBERS[owner]&&MEMBERS[owner].child)return r.shareWithCourtney===true;
     return false;
   });
 }
@@ -1563,7 +1565,7 @@ function openReminderModal(id){
   for(var i=0;i<list.length;i++){if(list[i].id===id){r=list[i];break;}}
   remNotifList=r&&r.notifications?r.notifications.slice():[0];
   document.getElementById("reminder-modal-title").textContent=r?"Edit Reminder":"New Reminder";
-  var isPartner=currentUser==="mike"||currentUser==="courtney",partnerName=currentUser==="mike"?"Courtney":"Mike";
+  var isPartner=currentUser==="mike"||currentUser==="courtney",isChild2=MEMBERS[currentUser]&&MEMBERS[currentUser].child,partnerName=currentUser==="mike"?"Courtney":"Mike"
   var rctype=r&&r.customType?r.customType:"days";
   var rshowC=r&&r.repeat==="custom";
   var remRDaysArr=r&&r.repeatDays?r.repeatDays.slice():[];
@@ -1584,7 +1586,7 @@ function openReminderModal(id){
     +"<div><div style='font-size:12px;font-weight:500;color:#6b7280;margin-bottom:4px'>Repeat</div><select id='rem-repeat' style='width:100%'>"+repOpts+repOpts+"</select></div>"
     +custHtml
     +"<div><div style='font-size:12px;font-weight:500;color:#6b7280;margin-bottom:6px'>Notifications</div><div id='rem-notif-rows'></div></div>"
-    +(isPartner?"<div style='display:flex;align-items:center;gap:10px'><label class='toggle-wrap'><input type='checkbox' id='rem-share' "+(r&&r.sharedWithPartner?"checked":"")+" ><span class='toggle-slider'></span></label><span style='font-size:13px'>Share with "+partnerName+"</span></div>":"")
+    +(isPartner?"<div style='display:flex;align-items:center;gap:10px'><label class='toggle-wrap'><input type='checkbox' id='rem-share' "+(r&&r.sharedWithPartner?"checked":"")+" ><span class='toggle-slider'></span></label><span style='font-size:13px'>Share with "+partnerName+"</span></div>":"")+(isChild2?"<div style='font-size:12px;font-weight:500;color:#6b7280;margin-bottom:6px'>Share with parent</div><div style='display:flex;gap:8px'><label style='display:flex;align-items:center;gap:6px;font-size:13px'><input type='checkbox' id='rem-share-mike' "+(r&&r.shareWithMike?"checked":"")+" >Mike</label><label style='display:flex;align-items:center;gap:6px;font-size:13px'><input type='checkbox' id='rem-share-courtney' "+(r&&r.shareWithCourtney?"checked":"")+" >Courtney</label></div>":"")
     +"<div style='display:flex;gap:8px;margin-top:4px'><button class='btn btn-primary' style='flex:1' onclick='saveReminder()'>Save</button>"+(r?"<button class='btn btn-danger' onclick=\"deleteReminder('"+r.id+"')\">Delete</button>":"")+"<button class='btn btn-secondary' onclick=\"closeModal('reminder-modal')\">Cancel</button></div>";
   document.getElementById("reminder-form").innerHTML=html;
   // Wire up custom repeat toggle

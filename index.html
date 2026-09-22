@@ -216,7 +216,6 @@ input:checked+.toggle-slider:before{transform:translateX(20px)}
   <button class="tab-btn active" onclick="showTab('home')" id="tab-home"><span>&#127968;</span>Home</button>
   <button class="tab-btn" onclick="showTab('calendar')" id="tab-calendar"><span>&#128197;</span>Cal</button>
   <button class="tab-btn" onclick="showTab('tasks')" id="tab-tasks"><span>&#9989;</span>Tasks</button>
-  <button class="tab-btn" onclick="showTab('meals')" id="tab-meals"><span>&#127869;</span>Meals</button>
   <button class="tab-btn" onclick="showTab('shopping')" id="tab-shopping"><span>&#128722;</span>Shop</button>
   <button class="tab-btn" onclick="showTab('reminders')" id="tab-reminders"><span>&#128276;</span>Remind</button>
   <button class="tab-btn" onclick="showTab('lists')" id="tab-lists"><span>&#128218;</span>Lists</button>
@@ -891,7 +890,7 @@ function openGiveReward(kid){
 function renderTasks(){
   var isAdmin=MEMBERS[currentUser]&&MEMBERS[currentUser].admin,isChild=MEMBERS[currentUser]&&MEMBERS[currentUser].child;
   document.getElementById("tasks-title").textContent=workMode?"Work Tasks":"Tasks & Chores";
-  var tabs=workMode?["todos","jobs"]:["todos","chores","completed-chores","rewards"];
+  var tabs=workMode?["todos","jobs"]:["todos"];
   if(tabs.indexOf(currentTaskSub)<0)currentTaskSub=tabs[0];
   var th=document.getElementById("tasks-tabs");th.innerHTML="";
   var labels={"chores":"Chores","completed-chores":"Done","todos":"To-Do","rewards":"Rewards","jobs":"Jobs","lists":"My Lists"};

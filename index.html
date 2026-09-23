@@ -1363,6 +1363,8 @@ function renderShopping(){
     (function(iid){chk.onclick=function(){toggleStoreItem(iid);};})(item.id);row.appendChild(chk);
     var txt=document.createElement("div");txt.style.cssText="flex:1;font-size:14px;text-decoration:"+(item.completed?"line-through":"none");txt.textContent=item.text;row.appendChild(txt);
     if(item.autoRestock){var arBadge=document.createElement("span");arBadge.style.cssText="font-size:9px;background:#dcfce7;color:#15803d;border-radius:6px;padding:1px 5px;margin-right:4px;flex-shrink:0";arBadge.textContent="Auto";row.appendChild(arBadge);}
+    var editG=document.createElement("button");editG.style.cssText="background:none;border:none;cursor:pointer;font-size:16px;padding:0 4px";editG.innerHTML="&#9998;";
+    (function(iid){editG.onclick=function(){openEditGrocItem(iid);};})(item.id);
     var del=document.createElement("button");del.style.cssText="background:none;border:none;color:#ef4444;cursor:pointer;font-size:18px;padding:0 2px";del.innerHTML="&#215;";
     (function(iid){del.onclick=function(){deleteStoreItem(iid);};})(item.id);row.appendChild(del);
     sc.appendChild(row);
@@ -1789,6 +1791,23 @@ function renderLists(){
     var total=(lst.items||[]).length;
     lcount.textContent=total?done+"/"+total+" done":"empty";
     lhdr.appendChild(arrow);lhdr.appendChild(lname);lhdr.appendChild(lcount);
+    // Rename and delete buttons
+    var lrename=document.createElement("button");lrename.style.cssText="background:none;border:none;cursor:pointer;font-size:15px;padding:2px 4px";lrename.innerHTML="&#9998;";
+    lrename.onclick=function(e){e.stopPropagation();
+      var el=document.getElementById("generic-modal-content");el.innerHTML="";
+      var tt=document.createElement("div");tt.style.cssText="font-weight:700;font-size:17px;margin-bottom:12px";tt.textContent="Rename List";
+      var inp=document.createElement("input");inp.id="rename-list-input";inp.value=lst.name;inp.style.width="100%";
+      var br=document.createElement("div");br.style.cssText="display:flex;gap:8px;margin-top:12px";
+      var sv=document.createElement("button");sv.className="btn btn-primary";sv.style.flex="1";sv.textContent="Save";
+      (function(lid2){sv.onclick=function(){var v=document.getElementById("rename-list-input").value.trim();if(!v)return;var l=(STATE.myLists[currentUser]||[]).find(function(x){return x.id===lid2;});if(l)l.name=v;save();closeModal("generic-modal");renderLists();};})(lst.id);
+      var cn=document.createElement("button");cn.className="btn btn-secondary";cn.textContent="Cancel";cn.onclick=function(){closeModal("generic-modal");};
+      br.appendChild(sv);br.appendChild(cn);el.appendChild(tt);el.appendChild(inp);el.appendChild(br);
+      document.getElementById("generic-modal").classList.add("open");
+      setTimeout(function(){var i=document.getElementById("rename-list-input");if(i)i.focus();},100);
+    };
+    var ldel2=document.createElement("button");ldel2.style.cssText="background:none;border:none;color:#ef4444;cursor:pointer;font-size:17px;padding:2px 4px";ldel2.innerHTML="&#215;";
+    (function(li2){ldel2.onclick=function(e){e.stopPropagation();confirmAction("Delete this list?",function(){STATE.myLists[currentUser].splice(li2,1);window.activeList=null;save();renderLists();});};})(li);
+    lhdr.appendChild(lrename);lhdr.appendChild(ldel2);
 
     // Toggle open/close
     (function(lid){lhdr.onclick=function(){window.activeList=window.activeList===lid?null:lid;renderLists();};})(lst.id);
@@ -1809,7 +1828,9 @@ function renderLists(){
         var itxt=document.createElement("div");itxt.style.cssText="flex:1;font-size:14px;text-decoration:"+(item.done?"line-through":"none")+";color:"+(item.done?"#9ca3af":"#1a1a1a");itxt.textContent=item.text;
         var idel=document.createElement("button");idel.style.cssText="background:none;border:none;color:#ef4444;cursor:pointer;font-size:18px;padding:0 2px";idel.innerHTML="&#215;";
         (function(iid){idel.onclick=function(){var l=STATE.myLists[currentUser].find(function(x){return x.id===lid;});if(l)l.items=l.items.filter(function(x){return x.id!==iid;});save();renderLists();};})(item.id);
-        irow.appendChild(ichk);irow.appendChild(itxt);irow.appendChild(idel);lbody.appendChild(irow);
+        var iedit=document.createElement("button");iedit.style.cssText="background:none;border:none;cursor:pointer;font-size:16px;padding:0 2px";iedit.innerHTML="&#9998;";
+        (function(lid2,iid2){iedit.onclick=function(){openEditListItem(lid2,iid2);};})(lst.id,item.id);
+        irow.appendChild(ichk);irow.appendChild(itxt);irow.appendChild(iedit);irow.appendChild(idel);lbody.appendChild(irow);
       });
 
       // Add item + Delete list buttons
@@ -1933,6 +1954,41 @@ function openAddTodo(editId){
   document.getElementById("generic-modal").classList.add("open");
 }
 function openEditTodo(id){openAddTodo(id);}
+
+function openEditGrocItem(id){
+  var items=STATE.groceries||[];
+  var item=items.find(function(x){return x.id===id;});if(!item)return;
+  var el=document.getElementById("generic-modal-content");el.innerHTML="";
+  var tt=document.createElement("div");tt.style.cssText="font-weight:700;font-size:17px;margin-bottom:12px";tt.textContent="Edit Item";
+  var inp=document.createElement("input");inp.id="edit-groc-input";inp.value=item.text;inp.style.width="100%";
+  var br=document.createElement("div");br.style.cssText="display:flex;gap:8px;margin-top:12px";
+  var sv=document.createElement("button");sv.className="btn btn-primary";sv.style.flex="1";sv.textContent="Save";
+  (function(iid){sv.onclick=function(){var v=document.getElementById("edit-groc-input").value.trim();if(!v)return;var i=(STATE.groceries||[]).map(function(x){return x.id;}).indexOf(iid);if(i>=0)STATE.groceries[i]=Object.assign({},STATE.groceries[i],{text:v});save();closeModal("generic-modal");renderShopping();};})(id);
+  var cn=document.createElement("button");cn.className="btn btn-secondary";cn.textContent="Cancel";cn.onclick=function(){closeModal("generic-modal");};
+  br.appendChild(sv);br.appendChild(cn);el.appendChild(tt);el.appendChild(inp);el.appendChild(br);
+  document.getElementById("generic-modal").classList.add("open");
+  setTimeout(function(){var i=document.getElementById("edit-groc-input");if(i)i.focus();},100);
+}
+
+function openEditListItem(listId,itemId){
+  var lst=(STATE.myLists[currentUser]||[]).find(function(l){return l.id===listId;});if(!lst)return;
+  var item=(lst.items||[]).find(function(x){return x.id===itemId;});if(!item)return;
+  var el=document.getElementById("generic-modal-content");el.innerHTML="";
+  var tt=document.createElement("div");tt.style.cssText="font-weight:700;font-size:17px;margin-bottom:12px";tt.textContent="Edit Item";
+  var inp=document.createElement("input");inp.id="edit-list-item-input";inp.value=item.text;inp.style.width="100%";
+  var br=document.createElement("div");br.style.cssText="display:flex;gap:8px;margin-top:12px";
+  var sv=document.createElement("button");sv.className="btn btn-primary";sv.style.flex="1";sv.textContent="Save";
+  sv.onclick=function(){
+    var v=document.getElementById("edit-list-item-input").value.trim();if(!v)return;
+    var l=(STATE.myLists[currentUser]||[]).find(function(x){return x.id===listId;});
+    if(l){var i=(l.items||[]).map(function(x){return x.id;}).indexOf(itemId);if(i>=0)l.items[i]=Object.assign({},l.items[i],{text:v});}
+    save();closeModal("generic-modal");renderLists();
+  };
+  var cn=document.createElement("button");cn.className="btn btn-secondary";cn.textContent="Cancel";cn.onclick=function(){closeModal("generic-modal");};
+  br.appendChild(sv);br.appendChild(cn);el.appendChild(tt);el.appendChild(inp);el.appendChild(br);
+  document.getElementById("generic-modal").classList.add("open");
+  setTimeout(function(){var i=document.getElementById("edit-list-item-input");if(i)i.focus();},100);
+}
 
 if(fbConfigured()){fbPull(function(){startSync();});}
 initLogin();

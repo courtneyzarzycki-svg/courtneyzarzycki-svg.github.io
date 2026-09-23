@@ -795,12 +795,12 @@ function renderCalDay(){
   var clickEvs=workMode?(STATE.events_work||[]):STATE.events;
   clickEvs.filter(function(e){return eventOccursOn(e,calSel);}).forEach(function(ev){
     var el=document.getElementById("evl-"+ev.id);
-    if(el)(function(eid){el.onclick=function(){openEventModal(eid);};})(ev.id);
+    if(el)(function(eid){el.onclick=function(){openEventOrAskRepeat(eid);};})(ev.id);
   });
   if(workMode){
     STATE.events.filter(function(e){return eventOccursOn(e,calSel)&&e.type==="vacation"&&(e.members||[]).indexOf("mike")>=0;}).forEach(function(ev){
       var el=document.getElementById("evl-"+ev.id);
-      if(el)(function(eid){el.onclick=function(){openEventModal(eid);};})(ev.id);
+      if(el)(function(eid){el.onclick=function(){openEventOrAskRepeat(eid);};})(ev.id);
     });
   }
 }
@@ -861,6 +861,7 @@ function switchCustomType(t){["days","every","nth"].forEach(function(x){var b=do
 function renderTypeHint(){var h={birthday:"Pink colour, repeats yearly",vacation:"Shades calendar days pale blue",event:""};var el=document.getElementById("ev-type-hint"),v=document.getElementById("ev-type");if(el&&v)el.textContent=h[v.value]||"";}
 function renderLocPreview(){var loc=document.getElementById("ev-loc"),el=document.getElementById("ev-loc-preview");if(el&&loc)el.innerHTML=loc.value?mapsLinks(loc.value):"";}
 function saveEvent(){
+  var isOneOff=window._editOneOff&&editingEventId;window._editOneOff=false;
   var title=document.getElementById("ev-title").value.trim();if(!title)return alert("Enter a title");
   var typeEl=document.getElementById("ev-type"),type=typeEl?typeEl.value:"event";
   var ct=document.querySelector("input[name='ctype']:checked");
@@ -1605,7 +1606,7 @@ function attachReminderClicks(){
     (function(card){
       var own=card.getAttribute("data-own")==="1";
       var id=card.getAttribute("data-id");
-      if(own)card.addEventListener("click",function(){openReminderModal(id);});
+      if(own)card.addEventListener("click",function(){openReminderOrAskRepeat(id);});
     })(cards[i]);
   }
 }
@@ -1621,7 +1622,16 @@ function saveReminder(){
   var t=getTimeField("rem");
   var rct3=document.querySelector("input[name='rctype']:checked");var selDays=[];document.querySelectorAll("#rem-custom-block .rday.sel").forEach(function(el){var all=document.querySelectorAll("#rem-custom-block .rday");for(var i2=0;i2<all.length;i2++)if(all[i2]===el)selDays.push(i2);});var r={id:editingRemId||uid(),title:title,date:document.getElementById("rem-date").value,h:t.h,m:t.m,ampm:t.ap,notifications:remNotifList.slice(),repeat:document.getElementById("rem-repeat").value,customType:rct3?rct3.value:"days",repeatDays:selDays,repeatEvery:parseInt((document.getElementById("rem-every")||{}).value)||2,repeatNth:(document.getElementById("rem-nth")||{}).value||"1st",repeatNthDay:parseInt((document.getElementById("rem-nthday")||{}).value)||1,owner:currentUser,sharedWithPartner:shareEl?shareEl.checked:false,shareWithMike:shareMikeEl?shareMikeEl.checked:false,shareWithCourtney:shareCourtEl?shareCourtEl.checked:false,completed:false,completedDate:null};
   if(workMode){if(!STATE.reminders_work)STATE.reminders_work=[];var idx=STATE.reminders_work.map(function(x){return x.id;}).indexOf(r.id);if(idx>=0)STATE.reminders_work[idx]=r;else STATE.reminders_work.push(r);}
-  else{var idx=STATE.reminders.map(function(x){return x.id;}).indexOf(r.id);if(idx>=0)STATE.reminders[idx]=r;else STATE.reminders.push(r);}
+  else{
+    var isOneOffR=window._editOneOff&&editingRemId;window._editOneOff=false;
+    if(isOneOffR){
+      var origRIdx=STATE.reminders.map(function(x){return x.id;}).indexOf(editingRemId);
+      if(origRIdx>=0){if(!STATE.reminders[origRIdx].exceptions)STATE.reminders[origRIdx].exceptions=[];STATE.reminders[origRIdx].exceptions.push(STATE.reminders[origRIdx].date);}
+      r=Object.assign({},r,{id:uid(),repeat:"none"});STATE.reminders.push(r);
+    } else {
+      var idx=STATE.reminders.map(function(x){return x.id;}).indexOf(r.id);if(idx>=0)STATE.reminders[idx]=r;else STATE.reminders.push(r);
+    }
+  }
   save();closeModal("reminder-modal");renderReminders();
 }
 function deleteReminder(id){confirmAction("Delete this reminder?",function(){STATE.reminders=STATE.reminders.filter(function(x){return x.id!==id;});STATE.reminders_work=(STATE.reminders_work||[]).filter(function(x){return x.id!==id;});save();closeModal("reminder-modal");renderReminders();});}
@@ -1988,6 +1998,38 @@ function openEditListItem(listId,itemId){
   br.appendChild(sv);br.appendChild(cn);el.appendChild(tt);el.appendChild(inp);el.appendChild(br);
   document.getElementById("generic-modal").classList.add("open");
   setTimeout(function(){var i=document.getElementById("edit-list-item-input");if(i)i.focus();},100);
+}
+
+function openEventOrAskRepeat(id){
+  var list=workMode?(STATE.events_work||[]):STATE.events;
+  var ev=list.find(function(e){return e.id===id;});
+  if(!ev||!ev.repeat||ev.repeat==="none"){openEventModal(id);return;}
+  var el=document.getElementById("generic-modal-content");el.innerHTML="";
+  var tt=document.createElement("div");tt.style.cssText="font-weight:700;font-size:17px;margin-bottom:8px";tt.textContent="Edit Repeating Event";
+  var sub=document.createElement("div");sub.style.cssText="font-size:13px;color:#6b7280;margin-bottom:16px";sub.textContent="What would you like to change?";
+  var b1=document.createElement("button");b1.className="btn btn-primary";b1.style.cssText="width:100%;margin-bottom:10px";b1.textContent="Just this occurrence";
+  (function(eid){b1.onclick=function(){closeModal("generic-modal");window._editOneOff=true;openEventModal(eid);};})(id);
+  var b2=document.createElement("button");b2.className="btn btn-secondary";b2.style.cssText="width:100%;margin-bottom:10px";b2.textContent="All future occurrences";
+  (function(eid){b2.onclick=function(){closeModal("generic-modal");openEventModal(eid);};})(id);
+  var cn=document.createElement("button");cn.className="btn btn-secondary";cn.style.width="100%";cn.textContent="Cancel";cn.onclick=function(){closeModal("generic-modal");};
+  el.appendChild(tt);el.appendChild(sub);el.appendChild(b1);el.appendChild(b2);el.appendChild(cn);
+  document.getElementById("generic-modal").classList.add("open");
+}
+
+function openReminderOrAskRepeat(id){
+  var list=workMode?(STATE.reminders_work||[]):STATE.reminders;
+  var r=list.find(function(x){return x.id===id;});
+  if(!r||!r.repeat||r.repeat==="none"){openReminderModal(id);return;}
+  var el=document.getElementById("generic-modal-content");el.innerHTML="";
+  var tt=document.createElement("div");tt.style.cssText="font-weight:700;font-size:17px;margin-bottom:8px";tt.textContent="Edit Repeating Reminder";
+  var sub=document.createElement("div");sub.style.cssText="font-size:13px;color:#6b7280;margin-bottom:16px";sub.textContent="What would you like to change?";
+  var b1=document.createElement("button");b1.className="btn btn-primary";b1.style.cssText="width:100%;margin-bottom:10px";b1.textContent="Just this occurrence";
+  (function(rid){b1.onclick=function(){closeModal("generic-modal");window._editOneOff=true;openReminderModal(rid);};})(id);
+  var b2=document.createElement("button");b2.className="btn btn-secondary";b2.style.cssText="width:100%;margin-bottom:10px";b2.textContent="All future occurrences";
+  (function(rid){b2.onclick=function(){closeModal("generic-modal");openReminderModal(rid);};})(id);
+  var cn=document.createElement("button");cn.className="btn btn-secondary";cn.style.width="100%";cn.textContent="Cancel";cn.onclick=function(){closeModal("generic-modal");};
+  el.appendChild(tt);el.appendChild(sub);el.appendChild(b1);el.appendChild(b2);el.appendChild(cn);
+  document.getElementById("generic-modal").classList.add("open");
 }
 
 if(fbConfigured()){fbPull(function(){startSync();});}

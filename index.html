@@ -867,8 +867,24 @@ function saveEvent(){
   var ct=document.querySelector("input[name='ctype']:checked");
   var s=getTimeField("evs"),e2=getTimeField("eve");
   var jobSel=document.getElementById("ev-job");var jobId=jobSel?jobSel.value:"";var jobObj=(STATE.jobs||[]).filter(function(j){return j.id===jobId;})[0];var ev={id:editingEventId||uid(),title:title,type:type,members:evMemSel.length?evMemSel:[currentUser],jobId:jobId,jobColor:jobObj?jobObj.color:"",date:document.getElementById("ev-date").value,endDate:(document.getElementById("ev-enddate")||{}).value||"",startH:s.h,startM:s.m,startAP:s.ap,endH:e2.h,endM:e2.m,endAP:e2.ap,location:document.getElementById("ev-loc").value,notes:document.getElementById("ev-notes").value,repeat:type==="birthday"?"yearly":document.getElementById("ev-repeat").value,customType:ct?ct.value:"days",repeatDays:evRepeatDays.slice(),repeatEvery:parseInt((document.getElementById("ev-every")||{}).value)||2,repeatNth:(document.getElementById("ev-nth")||{}).value||"1st",repeatNthDay:parseInt((document.getElementById("ev-nthday")||{}).value)||1,notifications:eventNotifList.slice(),parent:(document.getElementById("ev-parent")||{}).value||"",showInWork:!!(document.getElementById("ev-show-work")&&document.getElementById("ev-show-work").checked)};
-  if(workMode){var wl=STATE.events_work||[];var wi=wl.map(function(x){return x.id;}).indexOf(ev.id);if(wi>=0)wl[wi]=ev;else wl.push(ev);STATE.events_work=wl;}
-  else{var idx=STATE.events.map(function(x){return x.id;}).indexOf(ev.id);if(idx>=0)STATE.events[idx]=ev;else STATE.events.push(ev);}
+  var isOneOff=window._editOneOff&&editingEventId;window._editOneOff=false;
+  if(workMode){
+    var wl=STATE.events_work||[];
+    if(isOneOff){
+      // Keep original unchanged, add new one-off copy with new id and no repeat
+      ev=Object.assign({},ev,{id:uid(),repeat:"none"});wl.push(ev);
+    } else {
+      var wi=wl.map(function(x){return x.id;}).indexOf(ev.id);if(wi>=0)wl[wi]=ev;else wl.push(ev);
+    }
+    STATE.events_work=wl;
+  } else {
+    if(isOneOff){
+      // Keep original unchanged, add new one-off copy
+      ev=Object.assign({},ev,{id:uid(),repeat:"none"});STATE.events.push(ev);
+    } else {
+      var idx=STATE.events.map(function(x){return x.id;}).indexOf(ev.id);if(idx>=0)STATE.events[idx]=ev;else STATE.events.push(ev);
+    }
+  }
   save();closeModal("event-modal");renderCalendar();
 }
 function deleteEvent(id){confirmAction("Delete this event?",function(){STATE.events=STATE.events.filter(function(e){return e.id!==id;});STATE.events_work=(STATE.events_work||[]).filter(function(e){return e.id!==id;});STATE.lastModified=new Date().getTime();save();fbPush();closeModal("event-modal");renderCalendar();});}
@@ -1625,8 +1641,7 @@ function saveReminder(){
   else{
     var isOneOffR=window._editOneOff&&editingRemId;window._editOneOff=false;
     if(isOneOffR){
-      var origRIdx=STATE.reminders.map(function(x){return x.id;}).indexOf(editingRemId);
-      if(origRIdx>=0){if(!STATE.reminders[origRIdx].exceptions)STATE.reminders[origRIdx].exceptions=[];STATE.reminders[origRIdx].exceptions.push(STATE.reminders[origRIdx].date);}
+      // Keep original unchanged, add new one-off copy with new id and no repeat
       r=Object.assign({},r,{id:uid(),repeat:"none"});STATE.reminders.push(r);
     } else {
       var idx=STATE.reminders.map(function(x){return x.id;}).indexOf(r.id);if(idx>=0)STATE.reminders[idx]=r;else STATE.reminders.push(r);

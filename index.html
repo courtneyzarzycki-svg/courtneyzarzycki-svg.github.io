@@ -867,6 +867,7 @@ function saveEvent(){
   var s=getTimeField("evs"),e2=getTimeField("eve");
   var jobSel=document.getElementById("ev-job");var jobId=jobSel?jobSel.value:"";var jobObj=(STATE.jobs||[]).filter(function(j){return j.id===jobId;})[0];var ev={id:editingEventId||uid(),title:title,type:type,members:evMemSel.length?evMemSel:[currentUser],jobId:jobId,jobColor:jobObj?jobObj.color:"",date:document.getElementById("ev-date").value,endDate:(document.getElementById("ev-enddate")||{}).value||"",startH:s.h,startM:s.m,startAP:s.ap,endH:e2.h,endM:e2.m,endAP:e2.ap,location:document.getElementById("ev-loc").value,notes:document.getElementById("ev-notes").value,repeat:type==="birthday"?"yearly":document.getElementById("ev-repeat").value,customType:ct?ct.value:"days",repeatDays:evRepeatDays.slice(),repeatEvery:parseInt((document.getElementById("ev-every")||{}).value)||2,repeatNth:(document.getElementById("ev-nth")||{}).value||"1st",repeatNthDay:parseInt((document.getElementById("ev-nthday")||{}).value)||1,notifications:eventNotifList.slice(),parent:(document.getElementById("ev-parent")||{}).value||"",showInWork:!!(document.getElementById("ev-show-work")&&document.getElementById("ev-show-work").checked)};
   var isOneOff=window._editOneOff&&editingEventId;window._editOneOff=false;
+  alert("isOneOff="+isOneOff+" editingEventId="+editingEventId);
   if(workMode){
     var wl=STATE.events_work||[];
     if(isOneOff){

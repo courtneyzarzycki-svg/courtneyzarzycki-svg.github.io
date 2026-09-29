@@ -861,7 +861,6 @@ function switchCustomType(t){["days","every","nth"].forEach(function(x){var b=do
 function renderTypeHint(){var h={birthday:"Pink colour, repeats yearly",vacation:"Shades calendar days pale blue",event:""};var el=document.getElementById("ev-type-hint"),v=document.getElementById("ev-type");if(el&&v)el.textContent=h[v.value]||"";}
 function renderLocPreview(){var loc=document.getElementById("ev-loc"),el=document.getElementById("ev-loc-preview");if(el&&loc)el.innerHTML=loc.value?mapsLinks(loc.value):"";}
 function saveEvent(){
-  var isOneOff=window._editOneOff&&editingEventId;window._editOneOff=false;
   var title=document.getElementById("ev-title").value.trim();if(!title)return alert("Enter a title");
   var typeEl=document.getElementById("ev-type"),type=typeEl?typeEl.value:"event";
   var ct=document.querySelector("input[name='ctype']:checked");

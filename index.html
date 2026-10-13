@@ -271,7 +271,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px)}
 </div>
 
 <script>
-var APP_VERSION="1.4";
+var APP_VERSION="1.5";
 var MEMBERS={
   mike:    {name:"Mike",    pin:"4444",color:"#22c55e",light:"#dcfce7",dark:"#15803d",initials:"M", admin:true,work:true},
   courtney:{name:"Courtney",pin:"3333",color:"#a855f7",light:"#f3e8ff",dark:"#7e22ce",initials:"Co",admin:true},
@@ -2041,6 +2041,7 @@ function openEditListItem(listId,itemId){
 function openEventOrAskRepeat(id){
   var list=workMode?(STATE.events_work||[]):STATE.events;
   var ev=list.find(function(e){return e.id===id;});
+  console.log("openEventOrAskRepeat id="+id+" ev="+JSON.stringify(ev?{repeat:ev.repeat,title:ev.title}:null));
   if(!ev||!ev.repeat||ev.repeat==="none"){openEventModal(id);return;}
   var el=document.getElementById("generic-modal-content");el.innerHTML="";
   var tt=document.createElement("div");tt.style.cssText="font-weight:700;font-size:17px;margin-bottom:8px";tt.textContent="Edit Repeating Event";

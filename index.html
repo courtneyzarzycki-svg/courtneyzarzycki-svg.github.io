@@ -271,7 +271,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px)}
 </div>
 
 <script>
-var APP_VERSION="1.5";
+var APP_VERSION="1.6";
 var MEMBERS={
   mike:    {name:"Mike",    pin:"4444",color:"#22c55e",light:"#dcfce7",dark:"#15803d",initials:"M", admin:true,work:true},
   courtney:{name:"Courtney",pin:"3333",color:"#a855f7",light:"#f3e8ff",dark:"#7e22ce",initials:"Co",admin:true},
@@ -799,12 +799,12 @@ function renderCalDay(){
   var clickEvs=workMode?(STATE.events_work||[]):STATE.events;
   clickEvs.filter(function(e){return eventOccursOn(e,calSel);}).forEach(function(ev){
     var el=document.getElementById("evl-"+ev.id);
-    if(el)(function(eid){el.onclick=function(){openEventOrAskRepeat(eid);};})(ev.id);
+    if(el)(function(eid,erep){el.onclick=function(){openEventOrAskRepeat(eid,erep);};})(ev.id,ev.repeat||"none");
   });
   if(workMode){
     STATE.events.filter(function(e){return eventOccursOn(e,calSel)&&e.type==="vacation"&&(e.members||[]).indexOf("mike")>=0;}).forEach(function(ev){
       var el=document.getElementById("evl-"+ev.id);
-      if(el)(function(eid){el.onclick=function(){openEventOrAskRepeat(eid);};})(ev.id);
+      if(el)(function(eid,erep){el.onclick=function(){openEventOrAskRepeat(eid,erep);};})(ev.id,ev.repeat||"none");
     });
   }
 }
@@ -2038,11 +2038,11 @@ function openEditListItem(listId,itemId){
   setTimeout(function(){var i=document.getElementById("edit-list-item-input");if(i)i.focus();},100);
 }
 
-function openEventOrAskRepeat(id){
+function openEventOrAskRepeat(id,rep){
   var list=workMode?(STATE.events_work||[]):STATE.events;
   var ev=list.find(function(e){return e.id===id;});
-  console.log("openEventOrAskRepeat id="+id+" ev="+JSON.stringify(ev?{repeat:ev.repeat,title:ev.title}:null));
-  if(!ev||!ev.repeat||ev.repeat==="none"){openEventModal(id);return;}
+  var repeat=rep||(ev?ev.repeat:"none")||"none";
+  if(repeat==="none"){openEventModal(id);return;}
   var el=document.getElementById("generic-modal-content");el.innerHTML="";
   var tt=document.createElement("div");tt.style.cssText="font-weight:700;font-size:17px;margin-bottom:8px";tt.textContent="Edit Repeating Event";
   var sub=document.createElement("div");sub.style.cssText="font-size:13px;color:#6b7280;margin-bottom:16px";sub.textContent="What would you like to change?";
